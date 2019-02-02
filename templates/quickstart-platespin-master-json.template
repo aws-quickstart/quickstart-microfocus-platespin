@@ -179,7 +179,10 @@
             "AllowedValues": [
                 "t2.large",
                 "t2.xlarge",
-                "t2.2xlarge"
+                "t3.large",
+				"t3.xlarge",
+				"m4.large",
+				"m4.xlarge"
             ],
             "ConstraintDescription": "must be a valid EC2 instance type."
         },
