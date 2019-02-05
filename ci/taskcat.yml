@@ -11,7 +11,7 @@ global:
 tests:
   json-master:
     parameter_input: master-parameters.json
-    template_file: quickstart-platespin-master-json.template
+    template_file: quickstart-platespin-master-yaml.template
     regions:
     - us-west-2
 
