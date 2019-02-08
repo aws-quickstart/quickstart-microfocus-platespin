@@ -375,7 +375,10 @@ Resources:
               waitAfterCompletion: forever
             2-reconfigure-srv:
               command: powershell.exe -Command "C:\Windows\OEM\Provision.ps1"
-              waitAfterCompletion: forever
+              waitAfterCompletion: '0'
+            3-wait:
+              command: powershell.exe -command Start-Sleep -Seconds 120
+              waitAfterCompletion: '0'
         finalize:
           commands:
             1-signal-success:
@@ -422,7 +425,7 @@ Resources:
     CreationPolicy:
       ResourceSignal:
         Count: '1'
-        Timeout: PT20M
+        Timeout: PT30M
   RecoveryAlarm:
     Type: 'AWS::CloudWatch::Alarm'
     Properties:
