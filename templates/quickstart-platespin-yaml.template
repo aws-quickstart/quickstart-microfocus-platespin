@@ -170,7 +170,7 @@ Mappings:
     AMI:
       MFPSM201811AMI: PSM 2018.11 v2
     us-west-2:
-      MFPSM201811AMI: ami-06937399f4d21e7a9
+      MFPSM201811AMI: ami-0f9abc0bce7432eab
     ap-south-1:
       MFPSM201811AMI: ami-01e6eeea904c644ee
 Resources:
@@ -426,7 +426,10 @@ Resources:
                   - !Ref MigrateServerHostName
                   - '''"'
               waitAfterCompletion: forever
-            2-wait-for-command-execution:
+            2-reconfigure-srv:
+              command: powershell.exe -Command "C:\Windows\OEM\Provision.ps1"
+              waitAfterCompletion: '0'
+            3-wait:
               command: powershell.exe -command Start-Sleep -Seconds 120
               waitAfterCompletion: '0'
         finalize:
