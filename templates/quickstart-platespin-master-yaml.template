@@ -12,11 +12,11 @@ Metadata:
   'AWS::CloudFormation::Interface':
     ParameterGroups:
       - Label:
-          default: Availability Zone Configuration
+          default: Availability Zone configuration
         Parameters:
           - AvailabilityZones
       - Label:
-          default: Network Configuration
+          default: Network configuration
         Parameters:
           - VPCCIDR
           - PublicSubnet1CIDR
@@ -24,16 +24,16 @@ Metadata:
           - PrivateSubnet1CIDR
           - PrivateSubnet2CIDR
       - Label:
-          default: Amazon EC2 Configuration
+          default: Amazon EC2 configuration
         Parameters:
           - KeyPairName
-          - WorkloadInstanceType
-          - AutoEIP
-          - HostName
+          - MigrateServerInstanceType
+          - AssignElasticIP
+          - MigrateServerHostName
           - RemoteAccessCIDR
           - SNSTopicMailID
       - Label:
-          default: AWS Quick Start Configuration
+          default: AWS Quick Start configuration
         Parameters:
           - QSS3BucketName
           - QSS3KeyPrefix
@@ -57,15 +57,15 @@ Metadata:
       QSS3KeyPrefix:
         default: Quick Start S3 key prefix
       RemoteAccessCIDR:
-        default: Allowed PlateSpin Migrate external access CIDR
-      AutoEIP:
+        default: PlateSpin Migrate server remote access CIDR
+      AssignElasticIP:
         default: Auto-assign elastic IP
-      HostName:
-        default: Host Name
-      WorkloadInstanceType:
-        default: Migrate server instance type
+      MigrateServerHostName:
+        default: PlateSpin Migrate server host name
+      MigrateServerInstanceType:
+        default: PlateSpin Migrate server instance type
       SNSTopicMailID:
-        default: Email ID
+        default: Alarm notification email ID
 Resources:
   VPCStack:
     Type: 'AWS::CloudFormation::Stack'
@@ -84,17 +84,17 @@ Resources:
         PrivateSubnet2ACIDR: !Ref PrivateSubnet2CIDR
         VPCCIDR: !Ref VPCCIDR
         CreatePrivateSubnets: 'true'
-  WorkloadStack:
+  PlateSpinMigrateStack:
     DependsOn: VPCStack
     Type: 'AWS::CloudFormation::Stack'
     Properties:
       TemplateURL: !Sub >-
         https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/quickstart-platespin-yaml.template
       Parameters:
-        WorkloadInstanceType: !Ref WorkloadInstanceType
+        MigrateServerInstanceType: !Ref MigrateServerInstanceType
         KeyPairName: !Ref KeyPairName
-        AutoEIP: !Ref AutoEIP
-        HostName: !Ref HostName
+        AssignElasticIP: !Ref AssignElasticIP
+        MigrateServerHostName: !Ref MigrateServerHostName
         PublicSubnetID: !GetAtt 
           - VPCStack
           - Outputs.PublicSubnet1ID
@@ -104,17 +104,19 @@ Resources:
         RemoteAccessCIDR: !Ref RemoteAccessCIDR
         SNSTopicMailID: !Ref SNSTopicMailID
 Parameters:
-  HostName:
-    Description: Instance Name to be set.
+  MigrateServerHostName:
+    Description: >-
+      The instance name to be set for your PlateSpin Migrate server. Length upto 15 characters. Leave blank to
+      auto-generate based on stack name.
     Type: String
-    MinLength: '3'
-    MaxLength: '25'
-    Default: MigrateServer
+    Default: ''
     AllowedPattern: >-
-      (?=.{1,15}$)[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,13}[0-9A-Za-z])?(?:[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?)*
-    ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
-  WorkloadInstanceType:
-    Description: EC2 instance type for the Migrate Server instance
+      (?=.{0,15}$)[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,13}[0-9A-Za-z])?(?:[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?)*|
+    ConstraintDescription: >-
+      Must begin with a letter and contain only alphanumeric characters. Maximum
+      length upto 15 characters.
+  MigrateServerInstanceType:
+    Description: The EC2 instance type for your PlateSpin Migrate Server instance.
     Type: String
     Default: t2.large
     AllowedValues:
@@ -124,28 +126,30 @@ Parameters:
       - t3.xlarge
       - m4.large
       - m4.xlarge
-    ConstraintDescription: must be a valid EC2 instance type.
+    ConstraintDescription: Must be a valid EC2 instance type.
   KeyPairName:
     Description: >-
-      The name of an existing public/private key pair, which allows you to
-      securely connect to your instance after it launches
+      The name of an existing EC2 key pair, which allows you to
+      securely connect to your instance after it launches.
     Type: 'AWS::EC2::KeyPair::KeyName'
     AllowedPattern: .+
-    ConstraintDescription: Must be the name of an existing EC2 KeyPair
-  AutoEIP:
-    Description: Automatically assign an Elastic IP address to the PSM host
+    ConstraintDescription: Must be the name of an existing EC2 key pair.
+  AssignElasticIP:
+    Description: Choose No to use a non-static public IP address for the PlateSpin Migrate server instance. Note that when the instance is restarted the IP will change.
     Type: String
     AllowedValues:
       - 'Yes'
       - 'No'
     Default: 'Yes'
   SNSTopicMailID:
-    Description: Email ID to register SNS topic for sending CloudWatch alarm notifications
+    Description: >-
+      The email ID to which AWS CloudWatch alarm notifications about the 
+      PlateSpin Migrate Server instance will be sent.
     Type: String
     AllowedPattern: '^[\x20-\x45]?[\w-\+]+(\.[\w]+)*@[\w-]+(\.[\w]+)*(\.[a-z]{2,})$'
-    ConstraintDescription: Enter the email id for the SNS topic
+    ConstraintDescription: Must be a valid email ID.
   AvailabilityZones:
-    Description: Availability Zone to use for the subnet in the VPC.
+    Description: Availability Zone to use for the subnet in the VPC. Select any two.
     Type: 'List<AWS::EC2::AvailabilityZone::Name>'
   PublicSubnet1CIDR:
     AllowedPattern: >-
@@ -202,8 +206,8 @@ Parameters:
       ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
     Description: >-
-      PlateSpin Migrate access will be allowed from this CIDR range (example for
-      full access: 0.0.0.0/0)
+      The access to PlateSpin Migrate server will be allowed from this CIDR range. 
+      Example for full access: 0.0.0.0/0.
     Type: String
   VPCCIDR:
     AllowedPattern: >-
@@ -216,7 +220,11 @@ Parameters:
     Type: String
 Outputs:
   MigrateServerURL:
-    Value: !GetAtt 
-      - WorkloadStack
-      - Outputs.MigrateServerURL
-    Description: Newly created PlateSpin Migrate server Public URL
+    Description: The public URL of the deployed PlateSpin Migrate server
+    Value: !GetAtt PlateSpinMigrateStack.Outputs.MigrateServerURL
+  MigrateServerIP:
+    Description: The public IP address of the deployed PlateSpin Migrate server instance
+    Value: !GetAtt PlateSpinMigrateStack.Outputs.MigrateServerIP
+  MigrateServerInstanceID:
+    Description: The PlateSpin Migrate server EC2 instance ID
+    Value: !GetAtt PlateSpinMigrateStack.Outputs.MigrateServerInstanceID

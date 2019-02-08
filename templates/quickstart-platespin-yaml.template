@@ -9,58 +9,59 @@ Metadata:
   'AWS::CloudFormation::Interface':
     ParameterGroups:
       - Label:
-          default: Network Configuration
+          default: Network configuration
         Parameters:
           - VPCID
           - PublicSubnetID
       - Label:
-          default: Amazon EC2 Configuration
+          default: Amazon EC2 configuration
         Parameters:
           - KeyPairName
-          - WorkloadInstanceType
-          - AutoEIP
-          - HostName
+          - MigrateServerInstanceType
+          - AssignElasticIP
+          - MigrateServerHostName
           - RemoteAccessCIDR
           - SNSTopicMailID
       - Label:
-          default: AWS Quick Start Configuration
+          default: AWS Quick Start configuration
         Parameters:
           - QSS3BucketName
           - QSS3KeyPrefix
     ParameterLabels:
-      AutoEIP:
-        default: Auto-assign Elastic IP
+      AssignElasticIP:
+        default: Auto-assign elastic IP
       KeyPairName:
-        default: Key Pair Name
+        default: Key pair name
       PublicSubnetID:
-        default: Public Subnet ID
+        default: Public subnet ID
       RemoteAccessCIDR:
-        default: Allowed PlateSpin Migrate External Access CIDR
+        default: PlateSpin Migrate server remote access CIDR
       VPCID:
         default: VPC ID
-      WorkloadInstanceType:
-        default: Migrate Server Instance Type
+      MigrateServerInstanceType:
+        default: PlateSpin Migrate server instance type
       SNSTopicMailID:
         default: Email ID
+      MigrateServerHostName:
+        default: PlateSpin Migrate server host name
       QSS3BucketName:
-        default: Quick Start S3 Bucket Name
+        default: Quick Start S3 bucket name
       QSS3KeyPrefix:
-        default: Quick Start S3 Key Prefix
+        default: Quick Start S3 key prefix
 Parameters:
-  HostName:
+  MigrateServerHostName:
     Description: >-
-      Instance Name to be set. Length upto 15 characters. Leave blank to
+      The instance name to be set for your PlateSpin Migrate server. Length upto 15 characters. Leave blank to
       auto-generate based on stack name.
     Type: String
-    Default: 'MigrateServer'
-    AllowedPattern: '[a-zA-Z0-9\-]+'
+    Default: ''
+    AllowedPattern: >-
+      (?=.{0,15}$)[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,13}[0-9A-Za-z])?(?:[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?)*|
     ConstraintDescription: >-
       Must begin with a letter and contain only alphanumeric characters. Maximum
       length upto 15 characters.
-    MaxLength: '15'
-    MinLength: '0'
-  WorkloadInstanceType:
-    Description: Migrate Server EC2 instance type
+  MigrateServerInstanceType:
+    Description: The EC2 instance type for your PlateSpin Migrate Server instance.
     Type: String
     Default: t2.large
     AllowedValues:
@@ -72,24 +73,26 @@ Parameters:
       - m4.xlarge
     ConstraintDescription: must be a valid EC2 instance type.
   KeyPairName:
-    Description: Name of an EC2 KeyPair to enable access to the instance.
+    Description: >-
+      The name of an existing EC2 key pair, which allows you to
+      securely connect to your instance after it launches.
     Type: 'AWS::EC2::KeyPair::KeyName'
     AllowedPattern: .+
-    ConstraintDescription: Must be the name of an existing EC2 KeyPair.
+    ConstraintDescription: Must be the name of an existing EC2 key pair.
   VPCID:
-    Description: Target VPC ID for PlateSpin Migrate instance
+    Description: The VPC ID for launching PlateSpin Migrate server instance.
     Type: 'AWS::EC2::VPC::Id'
     AllowedPattern: .+
-    ConstraintDescription: Must be a valid VPC Id.
+    ConstraintDescription: Must be a valid VPC ID.
   PublicSubnetID:
-    Description: Public SubnetID for PlateSpin Migrate instance
+    Description: The Public subnet ID for launching PlateSpin Migrate server instance.
     Type: 'AWS::EC2::Subnet::Id'
     AllowedPattern: .+
-    ConstraintDescription: Must be a valid Subnet Id.
-  AutoEIP:
+    ConstraintDescription: Must be a valid Subnet ID.
+  AssignElasticIP:
     Description: >-
-      Automatically assign an Elastic IP address to the PlateSpin Migrate
-      instance
+      Choose No to use a non-static public IP address for the PlateSpin Migrate server instance. 
+      Note that when the instance is restarted the IP will change.
     Type: String
     AllowedValues:
       - 'Yes'
@@ -100,15 +103,16 @@ Parameters:
       ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
     Description: >-
-      PlateSpin Migrate access will be allowed from this CIDR range (example for
-      full access: 0.0.0.0/0)
-    Default: 0.0.0.0/0
+      The access to PlateSpin Migrate server will be allowed from this CIDR range. 
+      Example for full access: 0.0.0.0/0.
     Type: String
   SNSTopicMailID:
-    Description: Email ID to register SNS topic for sending CloudWatch alarm notifications
+    Description: >-
+      The email ID to which AWS CloudWatch alarm notifications about the 
+      PlateSpin Migrate Server instance will be sent.
     Type: String
     AllowedPattern: '^[\x20-\x45]?[\w-\+]+(\.[\w]+)*@[\w-]+(\.[\w]+)*(\.[a-z]{2,})$'
-    ConstraintDescription: Enter the email id for the SNS topic
+    ConstraintDescription: Must be a valid email ID.
     Default: dev@platespin.com
   QSS3BucketName:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
@@ -134,21 +138,19 @@ Parameters:
     Type: String
 Conditions:
   AutoAssignEIP: !Equals 
-    - !Ref AutoEIP
+    - !Ref AssignElasticIP
     - 'Yes'
   GenerateHostName: !Equals 
-    - !Ref HostName
+    - !Ref MigrateServerHostName
     - ''
 Mappings:
-  AWSRegionArch2AMI:
+  AWSAMIRegionMap:
+    AMI:
+      MFPSM201811AMI: PSM 2018.11 v2
     us-west-2:
-      '64': ami-0f9abc0bce7432eab
-    eu-west-3:
-      '64': ami-08704b129c719d786
-    eu-west-1:
-      '64': ami-0f47b7082ee10218a
-    us-east-1:
-      '64': ami-0ce73d6a69c23030e
+      MFPSM201811AMI: ami-0f9abc0bce7432eab
+    ap-south-1:
+      MFPSM201811AMI: ami-01e6eeea904c644ee
 Resources:
   ServerSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
@@ -307,9 +309,9 @@ Resources:
     Type: 'AWS::EC2::EIP'
     Condition: AutoAssignEIP
     Properties:
-      InstanceId: !Ref MigrateServer
+      InstanceId: !Ref MigrateServerInstance
       Domain: vpc
-  MigrateServer:
+  MigrateServerInstance:
     Type: 'AWS::EC2::Instance'
     Metadata:
       'AWS::CloudFormation::Authentication':
@@ -370,7 +372,7 @@ Resources:
                 - - >-
                     powershell.exe -Command "C:\cfn\scripts\Rename-Computer.ps1
                     -Restart -NewName '
-                  - !Ref HostName
+                  - !Ref MigrateServerHostName
                   - '''"'
               waitAfterCompletion: forever
             2-reconfigure-srv:
@@ -385,11 +387,11 @@ Resources:
               command: powershell.exe -Command "Write-AWSQuickStartStatus"
               waitAfterCompletion: '0'
     Properties:
-      InstanceType: !Ref WorkloadInstanceType
+      InstanceType: !Ref MigrateServerInstanceType
       ImageId: !FindInMap 
-        - AWSRegionArch2AMI
+        - AWSAMIRegionMap
         - !Ref 'AWS::Region'
-        - '64'
+        - MFPSM201811AMI
       KeyName: !Ref KeyPairName
       IamInstanceProfile: !Ref MigrateInstanceProfile
       NetworkInterfaces:
@@ -407,7 +409,7 @@ Resources:
               - '-'
               - - !Ref 'AWS::StackName'
                 - MigrateServer
-            - !Ref HostName
+            - !Ref MigrateServerHostName
       UserData: !Base64 
         'Fn::Join':
           - ''
@@ -448,7 +450,7 @@ Resources:
         - !Ref AlarmNotificationTopic
       Dimensions:
         - Name: InstanceId
-          Value: !Ref MigrateServer
+          Value: !Ref MigrateServerInstance
   CPUAlarm:
     Type: 'AWS::CloudWatch::Alarm'
     Properties:
@@ -466,7 +468,7 @@ Resources:
       ComparisonOperator: GreaterThanThreshold
       Dimensions:
         - Name: InstanceId
-          Value: !Ref MigrateServer
+          Value: !Ref MigrateServerInstance
   AlarmNotificationTopic:
     Type: 'AWS::SNS::Topic'
     Properties:
@@ -475,16 +477,15 @@ Resources:
           Protocol: email
 Outputs:
   MigrateServerURL:
+    Description: The public URL of the deployed PlateSpin Migrate server
     Value: !Join 
       - ''
       - - 'https://'
-        - !GetAtt 
-          - MigrateServer
-          - PublicDnsName
+        - !GetAtt MigrateServerInstance.PublicDnsName
         - /migrate
-    Description: Newly created PlateSpin Migrate server Public URL
   MigrateServerIP:
-    Value: !GetAtt 
-      - MigrateServer
-      - PublicIp
-    Description: Newly created PlateSpin Migrate server Public IP
+    Description: The public IP address of the deployed PlateSpin Migrate server instance
+    Value: !GetAtt MigrateServerInstance.PublicIp
+  MigrateServerInstanceID:
+    Description: The PlateSpin Migrate server EC2 instance ID
+    Value: !Ref MigrateServerInstance
