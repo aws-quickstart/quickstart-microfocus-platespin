@@ -30,7 +30,8 @@ Metadata:
           - MigrateServerInstanceType
           - AssignElasticIP
           - MigrateServerHostName
-          - RemoteAccessCIDR
+          - ExternalAccessCIDR
+          - RDPAccessCIDR
           - SNSTopicMailID
       - Label:
           default: AWS Quick Start configuration
@@ -56,7 +57,9 @@ Metadata:
         default: Quick Start S3 bucket name
       QSS3KeyPrefix:
         default: Quick Start S3 key prefix
-      RemoteAccessCIDR:
+      ExternalAccessCIDR:
+        default: External access CIDR
+      RDPAccessCIDR:
         default: PlateSpin Migrate server remote access CIDR
       AssignElasticIP:
         default: Auto-assign elastic IP
@@ -66,43 +69,6 @@ Metadata:
         default: PlateSpin Migrate server instance type
       SNSTopicMailID:
         default: Alarm notification email ID
-Resources:
-  VPCStack:
-    Type: 'AWS::CloudFormation::Stack'
-    Properties:
-      TemplateURL: !Sub >-
-        https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-aws-vpc/templates/aws-vpc.template
-      Parameters:
-        AvailabilityZones: !Join 
-          - ','
-          - !Ref AvailabilityZones
-        KeyPairName: !Ref KeyPairName
-        NumberOfAZs: '2'
-        PublicSubnet1CIDR: !Ref PublicSubnet1CIDR
-        PublicSubnet2CIDR: !Ref PublicSubnet2CIDR
-        PrivateSubnet1ACIDR: !Ref PrivateSubnet1CIDR
-        PrivateSubnet2ACIDR: !Ref PrivateSubnet2CIDR
-        VPCCIDR: !Ref VPCCIDR
-        CreatePrivateSubnets: 'true'
-  PlateSpinMigrateStack:
-    DependsOn: VPCStack
-    Type: 'AWS::CloudFormation::Stack'
-    Properties:
-      TemplateURL: !Sub >-
-        https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/quickstart-platespin-yaml.template
-      Parameters:
-        MigrateServerInstanceType: !Ref MigrateServerInstanceType
-        KeyPairName: !Ref KeyPairName
-        AssignElasticIP: !Ref AssignElasticIP
-        MigrateServerHostName: !Ref MigrateServerHostName
-        PublicSubnetID: !GetAtt 
-          - VPCStack
-          - Outputs.PublicSubnet1ID
-        VPCID: !GetAtt 
-          - VPCStack
-          - Outputs.VPCID
-        RemoteAccessCIDR: !Ref RemoteAccessCIDR
-        SNSTopicMailID: !Ref SNSTopicMailID
 Parameters:
   MigrateServerHostName:
     Description: >-
@@ -201,12 +167,20 @@ Parameters:
       include numbers, lowercase letters, uppercase letters, hyphens (-), and
       forward slash (/).
     Type: String
-  RemoteAccessCIDR:
+  ExternalAccessCIDR:
     AllowedPattern: >-
       ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
     Description: >-
-      The access to PlateSpin Migrate server will be allowed from this CIDR range. 
+      The access to PlateSpin Migrate server Web UI and other HTTPS services including source discovery will be allowed from this CIDR range.  
+      Example for full access: 0.0.0.0/0.
+    Type: String
+  RDPAccessCIDR:
+    AllowedPattern: >-
+      ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
+    Description: >-
+      The access to PlateSpin Migrate server through RDP will be allowed from this CIDR range. 
       Example for full access: 0.0.0.0/0.
     Type: String
   VPCCIDR:
@@ -218,6 +192,46 @@ Parameters:
       CIDR block for the VPC with block size between a /16 netmask and /28
       netmask
     Type: String
+Resources:
+  VPCStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub >-
+        https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-aws-vpc/templates/aws-vpc.template
+      Parameters:
+        AvailabilityZones: !Join 
+          - ','
+          - !Ref AvailabilityZones
+        KeyPairName: !Ref KeyPairName
+        NumberOfAZs: '2'
+        PublicSubnet1CIDR: !Ref PublicSubnet1CIDR
+        PublicSubnet2CIDR: !Ref PublicSubnet2CIDR
+        PrivateSubnet1ACIDR: !Ref PrivateSubnet1CIDR
+        PrivateSubnet2ACIDR: !Ref PrivateSubnet2CIDR
+        VPCCIDR: !Ref VPCCIDR
+        CreatePrivateSubnets: 'true'
+  PlateSpinMigrateStack:
+    DependsOn: VPCStack
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub >-
+        https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/quickstart-platespin-yaml.template
+      Parameters:
+        MigrateServerInstanceType: !Ref MigrateServerInstanceType
+        KeyPairName: !Ref KeyPairName
+        AssignElasticIP: !Ref AssignElasticIP
+        MigrateServerHostName: !Ref MigrateServerHostName
+        PublicSubnetID: !GetAtt 
+          - VPCStack
+          - Outputs.PublicSubnet1ID
+        VPCID: !GetAtt 
+          - VPCStack
+          - Outputs.VPCID
+        
+        ExternalAccessCIDR: !Ref ExternalAccessCIDR
+        RDPAccessCIDR: !Ref RDPAccessCIDR
+        TargetAccessCIDR: !Ref VPCCIDR
+        SNSTopicMailID: !Ref SNSTopicMailID
 Outputs:
   MigrateServerURL:
     Description: The public URL of the deployed PlateSpin Migrate server

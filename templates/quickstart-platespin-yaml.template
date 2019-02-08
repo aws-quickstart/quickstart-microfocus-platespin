@@ -20,7 +20,9 @@ Metadata:
           - MigrateServerInstanceType
           - AssignElasticIP
           - MigrateServerHostName
-          - RemoteAccessCIDR
+          - ExternalAccessCIDR
+          - RDPAccessCIDR
+          - TargetAccessCIDR
           - SNSTopicMailID
       - Label:
           default: AWS Quick Start configuration
@@ -34,8 +36,12 @@ Metadata:
         default: Key pair name
       PublicSubnetID:
         default: Public subnet ID
-      RemoteAccessCIDR:
+      ExternalAccessCIDR:
+        default: External access CIDR
+      RDPAccessCIDR:
         default: PlateSpin Migrate server remote access CIDR
+      TargetAccessCIDR:
+        default: Migrated target workloads access CIDR
       VPCID:
         default: VPC ID
       MigrateServerInstanceType:
@@ -98,12 +104,28 @@ Parameters:
       - 'Yes'
       - 'No'
     Default: 'Yes'
-  RemoteAccessCIDR:
+  ExternalAccessCIDR:
     AllowedPattern: >-
       ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
     Description: >-
-      The access to PlateSpin Migrate server will be allowed from this CIDR range. 
+      The access to PlateSpin Migrate server Web UI and other HTTPS services including source discovery will be allowed from this CIDR range. 
+      Example for full access: 0.0.0.0/0.
+    Type: String
+  RDPAccessCIDR:
+    AllowedPattern: >-
+      ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
+    Description: >-
+      The access to PlateSpin Migrate server through RDP will be allowed from this CIDR range. 
+      Example for full access: 0.0.0.0/0.
+    Type: String
+  TargetAccessCIDR:
+    AllowedPattern: >-
+      ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
+    Description: >-
+      The access to migrated target workloads through all TCP ports will be allowed from this CIDR range. 
       Example for full access: 0.0.0.0/0.
     Type: String
   SNSTopicMailID:
@@ -158,35 +180,32 @@ Resources:
       GroupName: !Join 
         - _
         - - !Ref 'AWS::StackName'
-          - ServerSecurityGroup
-      GroupDescription: Allow access from HTTPS traffic
+          - PSMServer
+          - SG
+      GroupDescription: 'Allow access from HTTPS and RDP traffic'
       VpcId: !Ref VPCID
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: '443'
           ToPort: '443'
-          CidrIp: !Ref RemoteAccessCIDR
+          CidrIp: !Ref ExternalAccessCIDR
           Description: HTTPS
         - IpProtocol: tcp
           FromPort: '3389'
           ToPort: '3389'
-          CidrIp: 0.0.0.0/0
+          CidrIp: !Ref RDPAccessCIDR
           Description: RDP
-  TargetSecurityGroup:
+  ReplicationSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupName: !Join 
         - _
         - - !Ref 'AWS::StackName'
-          - TargetSecurityGroup
-      GroupDescription: 'Allow access for SSH, HTTPS and Data transfer'
+          - PSMReplication
+          - SG
+      GroupDescription: 'Allow access for SSH, PlateSpin Migrate Data transfer'
       VpcId: !Ref VPCID
       SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: '443'
-          ToPort: '443'
-          CidrIp: 0.0.0.0/0
-          Description: HTTPS
         - IpProtocol: tcp
           FromPort: '22'
           ToPort: '22'
@@ -195,8 +214,40 @@ Resources:
         - IpProtocol: tcp
           FromPort: '3725'
           ToPort: '3725'
-          CidrIp: 0.0.0.0/0
+          CidrIp: ExternalAccessCIDR
           Description: Data Transfer
+  ProductionSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupName: !Join 
+        - _
+        - - !Ref 'AWS::StackName'
+          - PSMProduction
+          - SG
+      GroupDescription: 'Allow access for all TCP ports'
+      VpcId: !Ref VPCID
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '0'
+          ToPort: '65535'
+          CidrIp: !Ref TargetAccessCIDR
+          Description: All TCP
+  TestSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupName: !Join 
+        - _
+        - - !Ref 'AWS::StackName'
+          - PSMTest
+          - SG
+      GroupDescription: 'Allow access for all TCP ports'
+      VpcId: !Ref VPCID
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '0'
+          ToPort: '65535'
+          CidrIp: !Ref TargetAccessCIDR
+          Description: All TCP
   MigratePolicy:
     Type: 'AWS::IAM::Policy'
     Properties:
