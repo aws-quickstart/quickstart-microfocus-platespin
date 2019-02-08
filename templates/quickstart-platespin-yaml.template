@@ -22,6 +22,11 @@ Metadata:
           - HostName
           - RemoteAccessCIDR
           - SNSTopicMailID
+      - Label:
+          default: AWS Quick Start Configuration
+        Parameters:
+          - QSS3BucketName
+          - QSS3KeyPrefix
     ParameterLabels:
       AutoEIP:
         default: Auto-assign Elastic IP
@@ -37,33 +42,114 @@ Metadata:
         default: Migrate Server Instance Type
       SNSTopicMailID:
         default: Email ID
+      QSS3BucketName:
+        default: Quick Start S3 Bucket Name
+      QSS3KeyPrefix:
+        default: Quick Start S3 Key Prefix
+Parameters:
+  HostName:
+    Description: >-
+      Instance Name to be set. Length upto 15 characters. Leave blank to
+      auto-generate based on stack name.
+    Type: String
+    Default: 'MigrateServer'
+    AllowedPattern: '[a-zA-Z0-9\-]+'
+    ConstraintDescription: >-
+      Must begin with a letter and contain only alphanumeric characters. Maximum
+      length upto 15 characters.
+    MaxLength: '15'
+    MinLength: '0'
+  WorkloadInstanceType:
+    Description: Migrate Server EC2 instance type
+    Type: String
+    Default: t2.large
+    AllowedValues:
+      - t2.large
+      - t2.xlarge
+      - t3.large
+      - t3.xlarge
+      - m4.large
+      - m4.xlarge
+    ConstraintDescription: must be a valid EC2 instance type.
+  KeyPairName:
+    Description: Name of an EC2 KeyPair to enable access to the instance.
+    Type: 'AWS::EC2::KeyPair::KeyName'
+    AllowedPattern: .+
+    ConstraintDescription: Must be the name of an existing EC2 KeyPair.
+  VPCID:
+    Description: Target VPC ID for PlateSpin Migrate instance
+    Type: 'AWS::EC2::VPC::Id'
+    AllowedPattern: .+
+    ConstraintDescription: Must be a valid VPC Id.
+  PublicSubnetID:
+    Description: Public SubnetID for PlateSpin Migrate instance
+    Type: 'AWS::EC2::Subnet::Id'
+    AllowedPattern: .+
+    ConstraintDescription: Must be a valid Subnet Id.
+  AutoEIP:
+    Description: >-
+      Automatically assign an Elastic IP address to the PlateSpin Migrate
+      instance
+    Type: String
+    AllowedValues:
+      - 'Yes'
+      - 'No'
+    Default: 'Yes'
+  RemoteAccessCIDR:
+    AllowedPattern: >-
+      ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
+    Description: >-
+      PlateSpin Migrate access will be allowed from this CIDR range (example for
+      full access: 0.0.0.0/0)
+    Default: 0.0.0.0/0
+    Type: String
+  SNSTopicMailID:
+    Description: Email ID to register SNS topic for sending CloudWatch alarm notifications
+    Type: String
+    AllowedPattern: '^[\x20-\x45]?[\w-\+]+(\.[\w]+)*@[\w-]+(\.[\w]+)*(\.[a-z]{2,})$'
+    ConstraintDescription: Enter the email id for the SNS topic
+    Default: dev@platespin.com
+  QSS3BucketName:
+    AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
+    ConstraintDescription: >-
+      Quick Start bucket name can include numbers, lowercase letters, uppercase
+      letters, and hyphens (-). It cannot start or end with a hyphen (-).
+    Default: aws-quickstart-migrate
+    Description: >-
+      S3 bucket name for the Quick Start assets. Quick Start bucket name can
+      include numbers, lowercase letters, uppercase letters, and hyphens (-). It
+      cannot start or end with a hyphen (-).
+    Type: String
+  QSS3KeyPrefix:
+    AllowedPattern: '^[0-9a-zA-Z-/]*$'
+    ConstraintDescription: >-
+      Quick Start key prefix can include numbers, lowercase letters, uppercase
+      letters, hyphens (-), and forward slash (/).
+    Default: platespin-migrate/
+    Description: >-
+      S3 key prefix for the Quick Start assets. Quick Start key prefix can
+      include numbers, lowercase letters, uppercase letters, hyphens (-), and
+      forward slash (/).
+    Type: String
+Conditions:
+  AutoAssignEIP: !Equals 
+    - !Ref AutoEIP
+    - 'Yes'
+  GenerateHostName: !Equals 
+    - !Ref HostName
+    - ''
+Mappings:
+  AWSRegionArch2AMI:
+    us-west-2:
+      '64': ami-0f9abc0bce7432eab
+    eu-west-3:
+      '64': ami-08704b129c719d786
+    eu-west-1:
+      '64': ami-0f47b7082ee10218a
+    us-east-1:
+      '64': ami-0ce73d6a69c23030e
 Resources:
-  MigrateServerInstance:
-    Type: 'AWS::EC2::Instance'
-    Properties:
-      InstanceType: !Ref WorkloadInstanceType
-      ImageId: !FindInMap 
-        - AWSRegionArch2AMI
-        - !Ref 'AWS::Region'
-        - '64'
-      KeyName: !Ref KeyPairName
-      IamInstanceProfile: !Ref MigrateInstanceProfile
-      NetworkInterfaces:
-        - SubnetId: !Ref PublicSubnetID
-          GroupSet:
-            - !Ref ServerSecurityGroup
-          AssociatePublicIpAddress: 'true'
-          DeviceIndex: '0'
-          DeleteOnTermination: 'true'
-      Tags:
-        - Key: Name
-          Value: !If 
-            - GenerateHostName
-            - !Join 
-              - '-'
-              - - !Ref 'AWS::StackName'
-                - MigrateServer
-            - !Ref HostName
   ServerSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -79,6 +165,11 @@ Resources:
           ToPort: '443'
           CidrIp: !Ref RemoteAccessCIDR
           Description: HTTPS
+        - IpProtocol: tcp
+          FromPort: '3389'
+          ToPort: '3389'
+          CidrIp: 0.0.0.0/0
+          Description: RDP
   TargetSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -104,12 +195,6 @@ Resources:
           ToPort: '3725'
           CidrIp: 0.0.0.0/0
           Description: Data Transfer
-  MigrateInstanceProfile:
-    Type: 'AWS::IAM::InstanceProfile'
-    Properties:
-      Path: /
-      Roles:
-        - !Ref MigrateRole
   MigratePolicy:
     Type: 'AWS::IAM::Policy'
     Properties:
@@ -192,6 +277,11 @@ Resources:
               - 'arn:aws:ec2:*:*:placement-group/*'
               - 'arn:aws:ec2:*:*:network-interface/*'
               - 'arn:aws:ec2:*::image/*'
+          - Sid: VisualEditor5
+            Effect: Allow
+            Action: 's3:GetObject'
+            Resource:
+              - 'arn:aws:s3:::${QSS3BucketName}/${QSS3KeyPrefix}*'
       Roles:
         - !Ref MigrateRole
   MigrateRole:
@@ -207,12 +297,132 @@ Resources:
             Action:
               - 'sts:AssumeRole'
       Path: /
-  ElasticIP:
+  MigrateInstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      Path: /
+      Roles:
+        - !Ref MigrateRole
+  PublicStaticIP:
     Type: 'AWS::EC2::EIP'
     Condition: AutoAssignEIP
     Properties:
-      InstanceId: !Ref MigrateServerInstance
+      InstanceId: !Ref MigrateServer
       Domain: vpc
+  MigrateServer:
+    Type: 'AWS::EC2::Instance'
+    Metadata:
+      'AWS::CloudFormation::Authentication':
+        S3AccessCreds:
+          type: S3
+          roleName: !Ref MigrateRole
+          buckets:
+            - !Ref QSS3BucketName
+      'AWS::CloudFormation::Init':
+        configSets:
+          config:
+            - fetchResources
+            - prepare
+            - setup
+            - finalize
+        fetchResources:
+          files:
+            'C:\cfn\scripts\Unzip-Archive.ps1':
+              source: !Sub >-
+                  https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Unzip-Archive.ps1
+            'C:\cfn\modules\AWSQuickStart.zip':
+              source: !Sub >-
+                  https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/modules/AWSQuickStart.zip
+            'C:\cfn\scripts\Join-Domain.ps1':
+              source: !Sub >-
+                  https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Join-Domain.ps1
+            'C:\cfn\scripts\Rename-Computer.ps1':
+              source: !Sub >-
+                  https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Rename-Computer.ps1
+        prepare:
+          commands:
+            1-set-execution-policy:
+              command: >-
+                powershell.exe -Command "Set-ExecutionPolicy RemoteSigned
+                -Force"
+              waitAfterCompletion: '0'
+            2-unpack-quickstart-module:
+              command: >-
+                powershell.exe -Command C:\cfn\scripts\Unzip-Archive.ps1 -Source
+                C:\cfn\modules\AWSQuickStart.zip -Destination
+                C:\Windows\system32\WindowsPowerShell\v1.0\Modules\
+              waitAfterCompletion: '0'
+            3-init-quickstart-module:
+              command: !Join 
+                - ''
+                - - powershell.exe -Command "
+                  - New-AWSQuickStartResourceSignal -Stack '
+                  - !Ref 'AWS::StackName'
+                  - ''' -Resource ''MigrateServer'' -Region '''
+                  - !Ref 'AWS::Region'
+                  - '''"'
+              waitAfterCompletion: '0'
+        setup:
+          commands:
+            1-rename-computer:
+              command: !Join 
+                - ''
+                - - >-
+                    powershell.exe -Command "C:\cfn\scripts\Rename-Computer.ps1
+                    -Restart -NewName '
+                  - !Ref HostName
+                  - '''"'
+              waitAfterCompletion: forever
+            2-reconfigure-srv:
+              command: powershell.exe -Command "C:\Windows\OEM\Provision.ps1"
+              waitAfterCompletion: forever
+        finalize:
+          commands:
+            1-signal-success:
+              command: powershell.exe -Command "Write-AWSQuickStartStatus"
+              waitAfterCompletion: '0'
+    Properties:
+      InstanceType: !Ref WorkloadInstanceType
+      ImageId: !FindInMap 
+        - AWSRegionArch2AMI
+        - !Ref 'AWS::Region'
+        - '64'
+      KeyName: !Ref KeyPairName
+      IamInstanceProfile: !Ref MigrateInstanceProfile
+      NetworkInterfaces:
+        - SubnetId: !Ref PublicSubnetID
+          GroupSet:
+            - !Ref ServerSecurityGroup
+          AssociatePublicIpAddress: 'true'
+          DeviceIndex: '0'
+          DeleteOnTermination: 'true'
+      Tags:
+        - Key: Name
+          Value: !If 
+            - GenerateHostName
+            - !Join 
+              - '-'
+              - - !Ref 'AWS::StackName'
+                - MigrateServer
+            - !Ref HostName
+      UserData: !Base64 
+        'Fn::Join':
+          - ''
+          - - |
+              <script>
+            - 'cfn-init.exe -v -c config -s '
+            - !Ref 'AWS::StackId'
+            - ' -r MigrateServer'
+            - ' --region '
+            - !Ref 'AWS::Region'
+            - |+
+
+            - |
+              </script>
+    CreationPolicy:
+      ResourceSignal:
+        Count: '1'
+        Timeout: PT20M
   RecoveryAlarm:
     Type: 'AWS::CloudWatch::Alarm'
     Properties:
@@ -235,7 +445,7 @@ Resources:
         - !Ref AlarmNotificationTopic
       Dimensions:
         - Name: InstanceId
-          Value: !Ref MigrateServerInstance
+          Value: !Ref MigrateServer
   CPUAlarm:
     Type: 'AWS::CloudWatch::Alarm'
     Properties:
@@ -253,103 +463,25 @@ Resources:
       ComparisonOperator: GreaterThanThreshold
       Dimensions:
         - Name: InstanceId
-          Value: !Ref MigrateServerInstance
+          Value: !Ref MigrateServer
   AlarmNotificationTopic:
     Type: 'AWS::SNS::Topic'
     Properties:
       Subscription:
         - Endpoint: !Ref SNSTopicMailID
           Protocol: email
-Parameters:
-  HostName:
-    Description: >-
-      Instance Name to be set. Length upto 15 characters. Leave blank to
-      auto-generate based on stack name.
-    Type: String
-    Default: ''
-    AllowedPattern: >-
-      (?=.{0,15}$)[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,13}[0-9A-Za-z])?(?:[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?)*|
-    ConstraintDescription: >-
-      Must begin with a letter and contain only alphanumeric characters. Maximum
-      length upto 15 characters.
-  WorkloadInstanceType:
-    Description: Migrate Server EC2 instance type
-    Type: String
-    Default: t2.large
-    AllowedValues:
-      - t2.large
-      - t2.xlarge
-      - t3.large
-      - t3.xlarge
-      - m4.large
-      - m4.xlarge
-    ConstraintDescription: must be a valid EC2 instance type.
-  KeyPairName:
-    Description: Name of an EC2 KeyPair to enable access to the instance.
-    Type: 'AWS::EC2::KeyPair::KeyName'
-    AllowedPattern: .+
-    ConstraintDescription: Must be the name of an existing EC2 KeyPair.
-  VPCID:
-    Description: Target VPC ID for PlateSpin Migrate instance
-    Type: 'AWS::EC2::VPC::Id'
-    AllowedPattern: .+
-    ConstraintDescription: Must be a valid VPC Id.
-  PublicSubnetID:
-    Description: Public SubnetID for PlateSpin Migrate instance
-    Type: 'AWS::EC2::Subnet::Id'
-    AllowedPattern: .+
-    ConstraintDescription: Must be a valid Subnet Id.
-  AutoEIP:
-    Description: >-
-      Automatically assign an Elastic IP address to the PlateSpin Migrate
-      instance
-    Type: String
-    AllowedValues:
-      - 'Yes'
-      - 'No'
-    Default: 'Yes'
-  RemoteAccessCIDR:
-    AllowedPattern: >-
-      ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
-    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
-    Description: >-
-      PlateSpin Migrate access will be allowed from this CIDR range (example for
-      full access: 0.0.0.0/0)
-    Type: String
-  SNSTopicMailID:
-    Description: Email ID to register SNS topic for sending CloudWatch alarm notifications
-    Type: String
-    AllowedPattern: '^[\x20-\x45]?[\w-\+]+(\.[\w]+)*@[\w-]+(\.[\w]+)*(\.[a-z]{2,})$'
-    ConstraintDescription: Enter the email id for the SNS topic
-Conditions:
-  AutoAssignEIP: !Equals 
-    - !Ref AutoEIP
-    - 'Yes'
-  GenerateHostName: !Equals 
-    - !Ref HostName
-    - ''
-Mappings:
-  AWSRegionArch2AMI:
-    us-west-2:
-      '64': ami-0f9abc0bce7432eab
-    eu-west-3:
-      '64': ami-08704b129c719d786
-    eu-west-1:
-      '64': ami-0f47b7082ee10218a
-    us-east-1:
-      '64': ami-0ce73d6a69c23030e
 Outputs:
   MigrateServerURL:
     Value: !Join 
       - ''
       - - 'https://'
         - !GetAtt 
-          - MigrateServerInstance
+          - MigrateServer
           - PublicDnsName
         - /migrate
     Description: Newly created PlateSpin Migrate server Public URL
   MigrateServerIP:
     Value: !GetAtt 
-      - MigrateServerInstance
+      - MigrateServer
       - PublicIp
     Description: Newly created PlateSpin Migrate server Public IP
