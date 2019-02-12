@@ -30,8 +30,10 @@ Metadata:
           - MigrateServerInstanceType
           - AssignElasticIP
           - MigrateServerHostName
-          - ExternalAccessCIDR
-          - RDPAccessCIDR
+          - MigrateAdminUsername
+          - MigrateAdminPassword
+          - ServerAccessCIDR
+          - HostAccessCIDR
           - SNSTopicMailID
       - Label:
           default: AWS Quick Start configuration
@@ -53,22 +55,26 @@ Metadata:
         default: Private subnet 2 CIDR
       VPCCIDR:
         default: VPC CIDR
+      ServerAccessCIDR:
+        default: Migrate server access CIDR
+      HostAccessCIDR:
+        default: Migrate server host access CIDR
+      AssignElasticIP:
+        default: Assign elastic IP
+      MigrateServerHostName:
+        default: Migrate server host name
+      MigrateAdminUsername:
+        default: Migrate admin username
+      MigrateAdminPassword:
+        default: Migrate admin password
+      MigrateServerInstanceType:
+        default: Migrate server instance type
+      SNSTopicMailID:
+        default: Email ID
       QSS3BucketName:
         default: Quick Start S3 bucket name
       QSS3KeyPrefix:
-        default: Quick Start S3 key prefix
-      ExternalAccessCIDR:
-        default: External access CIDR
-      RDPAccessCIDR:
-        default: PlateSpin Migrate server remote access CIDR
-      AssignElasticIP:
-        default: Auto-assign elastic IP
-      MigrateServerHostName:
-        default: PlateSpin Migrate server host name
-      MigrateServerInstanceType:
-        default: PlateSpin Migrate server instance type
-      SNSTopicMailID:
-        default: Email ID for alarm notifications
+        default: Quick Start S3 key prefix        
 Parameters:
   MigrateServerHostName:
     Description: >-
@@ -80,6 +86,22 @@ Parameters:
     ConstraintDescription: >-
       Must begin with a letter and contain only alphanumeric characters. Maximum
       length upto 15 characters.
+  MigrateAdminUsername:
+    Description: The username for the Migrate server admin account.
+    Type: String
+    Default: migrateadmin
+    MinLength: '5'
+    MaxLength: '25'
+    AllowedPattern: '[a-zA-Z0-9]*'
+  MigrateAdminPassword:
+    Description: >-
+      The password for the Migrate server admin account. It must be at least 8 characters containing letters, numbers and symbols
+    Type: String
+    MinLength: '8'
+    MaxLength: '32'
+    AllowedPattern: >-
+      (?=^.{6,255}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9])(?=.*[a-z])|(?=.*[^A-Za-z0-9])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9]))^.*
+    NoEcho: 'true'
   MigrateServerInstanceType:
     Description: The EC2 instance type for your PlateSpin Migrate Server instance.
     Type: String
@@ -100,7 +122,9 @@ Parameters:
     AllowedPattern: .+
     ConstraintDescription: Must be the name of an existing EC2 key pair.
   AssignElasticIP:
-    Description: Choose No to use a non-static public IP address for the PlateSpin Migrate server instance. Note that when the instance is restarted the IP will change.
+    Description: >-
+      By default, a persistent public IP address (EIP) is created and associated for the Migrate server. 
+      Choose No to request a public IP address from Amazon's public IP address pool.
     Type: String
     AllowedValues:
       - 'Yes'
@@ -165,7 +189,7 @@ Parameters:
       The S3 key prefix for the Quick Start assets. 
       The key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/).
     Type: String
-  ExternalAccessCIDR:
+  ServerAccessCIDR:
     AllowedPattern: >-
       ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
@@ -173,7 +197,7 @@ Parameters:
       The CIDR range from which the PlateSpin Migrate server Web UI and services can be accessed through HTTPS. 
       For example, to get full access, specify 0.0.0.0/0.
     Type: String
-  RDPAccessCIDR:
+  HostAccessCIDR:
     AllowedPattern: >-
       ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
@@ -218,6 +242,8 @@ Resources:
         KeyPairName: !Ref KeyPairName
         AssignElasticIP: !Ref AssignElasticIP
         MigrateServerHostName: !Ref MigrateServerHostName
+        MigrateAdminUsername: !Ref MigrateAdminUsername
+        MigrateAdminPassword: !Ref MigrateAdminPassword
         PublicSubnetID: !GetAtt 
           - VPCStack
           - Outputs.PublicSubnet1ID
@@ -225,8 +251,8 @@ Resources:
           - VPCStack
           - Outputs.VPCID
         
-        ExternalAccessCIDR: !Ref ExternalAccessCIDR
-        RDPAccessCIDR: !Ref RDPAccessCIDR
+        ServerAccessCIDR: !Ref ServerAccessCIDR
+        HostAccessCIDR: !Ref HostAccessCIDR
         TargetAccessCIDR: !Ref VPCCIDR
         SNSTopicMailID: !Ref SNSTopicMailID
 Outputs:
