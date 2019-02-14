@@ -16,16 +16,19 @@ Metadata:
       - Label:
           default: Amazon EC2 configuration
         Parameters:
-          - KeyPairName
           - MigrateServerInstanceType
           - AssignElasticIP
-          - MigrateServerHostName
-          - MigrateAdminUsername
-          - MigrateAdminPassword
+          - KeyPairName
           - ServerAccessCIDR
           - HostAccessCIDR
           - TargetAccessCIDR
           - SNSTopicMailID
+      - Label:
+          default: PlateSpin Migrate Server configuration
+        Parameters:
+          - MigrateServerHostname
+          - MigrateAdminUsername
+          - MigrateAdminPassword      
       - Label:
           default: AWS Quick Start configuration
         Parameters:
@@ -47,33 +50,31 @@ Metadata:
       VPCID:
         default: VPC ID
       MigrateServerInstanceType:
-        default: Server instance type
+        default: Migrate server instance type
       SNSTopicMailID:
         default: Email ID
-      MigrateServerHostName:
-        default: Migrate server host name
+      MigrateServerHostname:
+        default: Hostname
       MigrateAdminUsername:
-        default: Migrate admin username
+        default: Admin username
       MigrateAdminPassword:
-        default: Migrate admin password
+        default: Admin password
       QSS3BucketName:
         default: Quick Start S3 bucket name
       QSS3KeyPrefix:
         default: Quick Start S3 key prefix
 Parameters:
-  MigrateServerHostName:
+  MigrateServerHostname:
     Description: >-
-      (Optional) The name for your PlateSpin Migrate server instance. Maximum number of allowed characters is 15. 
-      Leave blank to automatically generate the instance name based on the stack name. 
+      The hostname for your PlateSpin Migrate server. Maximum number of allowed characters is 15.
     Type: String
-    Default: ''
-    AllowedPattern: >-
-      (?=.{0,15}$)[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,13}[0-9A-Za-z])?(?:[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?)*|
+    MinLength: '5'
+    MaxLength: '15'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
     ConstraintDescription: >-
-      Must begin with a letter and contain only alphanumeric characters. Maximum
-      length upto 15 characters.
+      Must begin with a letter and contain only alphanumeric characters. Maximum length upto 15 characters.
   MigrateAdminUsername:
-    Description: The username for the Migrate server admin account.
+    Description: The username for the PlateSpin Migrate server admin account.
     Type: String
     Default: migrateadmin
     MinLength: '5'
@@ -81,7 +82,7 @@ Parameters:
     AllowedPattern: '[a-zA-Z0-9]*'
   MigrateAdminPassword:
     Description: >-
-      The password for the Migrate server admin account. It must be at least 8 characters containing letters, numbers and symbols
+      The password for the PlateSpin Migrate server admin account. It must be at least 8 characters containing letters, numbers and symbols.
     Type: String
     MinLength: '8'
     MaxLength: '32'
@@ -89,7 +90,7 @@ Parameters:
       (?=^.{6,255}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9])(?=.*[a-z])|(?=.*[^A-Za-z0-9])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9]))^.*
     NoEcho: 'true'
   MigrateServerInstanceType:
-    Description: The EC2 instance type for your PlateSpin Migrate Server instance.
+    Description: The Amazon EC2 instance type for your PlateSpin Migrate server.
     Type: String
     Default: t2.large
     AllowedValues:
@@ -99,11 +100,10 @@ Parameters:
       - t3.xlarge
       - m4.large
       - m4.xlarge
-    ConstraintDescription: must be a valid EC2 instance type.
+    ConstraintDescription: Must be a valid EC2 instance type.
   KeyPairName:
     Description: >-
-      The name of an existing EC2 key pair, which allows you to
-      securely connect to your instance after it launches.
+      The name of an existing EC2 key pair, which allows you to securely connect to your instance after it launches.
     Type: 'AWS::EC2::KeyPair::KeyName'
     AllowedPattern: .+
     ConstraintDescription: Must be the name of an existing EC2 key pair.
@@ -119,8 +119,7 @@ Parameters:
     ConstraintDescription: Must be a valid Subnet ID.
   AssignElasticIP:
     Description: >-
-      By default, a persistent public IP address (EIP) is created and associated for the Migrate server. 
-      Choose No to request a public IP address from Amazon's public IP address pool.
+      Choose No to request a public IP address from Amazon's pool. Note that this IP will be changed when the instance is stopped and restarted.
     Type: String
     AllowedValues:
       - 'Yes'
@@ -156,7 +155,7 @@ Parameters:
   SNSTopicMailID:
     Description: >-
       The email ID to which AWS CloudWatch alarm notifications about the 
-      PlateSpin Migrate Server instance will be sent.
+      PlateSpin Migrate server instance will be sent.
     Type: String
     AllowedPattern: '^[\x20-\x45]?[\w-\+]+(\.[\w]+)*@[\w-]+(\.[\w]+)*(\.[a-z]{2,})$'
     ConstraintDescription: Must be a valid email ID.
@@ -186,15 +185,12 @@ Conditions:
   AutoAssignEIP: !Equals 
     - !Ref AssignElasticIP
     - 'Yes'
-  GenerateHostName: !Equals 
-    - !Ref MigrateServerHostName
-    - ''
 Mappings:
   AWSAMIRegionMap:
     AMI:
-      PSM201811: PlateSpin 2018.11 T3
+      PSM201811AMI: PlateSpin 2018.11 T3
     us-west-2:
-      PSM201811: ami-06937399f4d21e7a9
+      PSM201811AMI: ami-06937399f4d21e7a9
 Resources:
   ServerSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
@@ -436,7 +432,7 @@ Resources:
                 - - powershell.exe -Command "
                   - New-AWSQuickStartResourceSignal -Stack '
                   - !Ref 'AWS::StackName'
-                  - ''' -Resource ''MigrateServer'' -Region '''
+                  - ''' -Resource ''MigrateServerInstance'' -Region '''
                   - !Ref 'AWS::Region'
                   - '''"'
               waitAfterCompletion: '0'
@@ -459,7 +455,7 @@ Resources:
                 - - >-
                     powershell.exe -Command "C:\cfn\scripts\Rename-Computer.ps1
                     -Restart -NewName '
-                  - !Ref MigrateServerHostName
+                  - !Ref MigrateServerHostname
                   - '''"'
               waitAfterCompletion: forever
             3-wait-for-command-execution:
@@ -475,7 +471,7 @@ Resources:
       ImageId: !FindInMap 
         - AWSAMIRegionMap
         - !Ref 'AWS::Region'
-        - PSM201811
+        - PSM201811AMI
       KeyName: !Ref KeyPairName
       IamInstanceProfile: !Ref MigrateInstanceProfile
       NetworkInterfaces:
@@ -487,13 +483,11 @@ Resources:
           DeleteOnTermination: 'true'
       Tags:
         - Key: Name
-          Value: !If 
-            - GenerateHostName
-            - !Join 
+          Value: !Join 
+            - ''
+            - - !Ref 'AWS::StackName'
               - '-'
-              - - !Ref 'AWS::StackName'
-                - MigrateServer
-            - !Ref MigrateServerHostName
+              - !Ref MigrateServerHostname
       UserData: !Base64 
         'Fn::Join':
           - ''
@@ -501,7 +495,7 @@ Resources:
               <script>
             - 'cfn-init.exe -v -c config -s '
             - !Ref 'AWS::StackId'
-            - ' -r MigrateServer'
+            - ' -r MigrateServerInstance'
             - ' --region '
             - !Ref 'AWS::Region'
             - |+

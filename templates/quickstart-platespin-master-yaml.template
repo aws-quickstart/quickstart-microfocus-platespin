@@ -25,16 +25,19 @@ Metadata:
           - PrivateSubnet2CIDR
       - Label:
           default: Amazon EC2 configuration
-        Parameters:
-          - KeyPairName
+        Parameters:         
           - MigrateServerInstanceType
           - AssignElasticIP
-          - MigrateServerHostName
-          - MigrateAdminUsername
-          - MigrateAdminPassword
+          - KeyPairName
           - ServerAccessCIDR
           - HostAccessCIDR
           - SNSTopicMailID
+      - Label:
+          default: PlateSpin Migrate Server configuration
+        Parameters:
+          - MigrateServerHostname
+          - MigrateAdminUsername
+          - MigrateAdminPassword
       - Label:
           default: AWS Quick Start configuration
         Parameters:
@@ -61,12 +64,12 @@ Metadata:
         default: Migrate server host access CIDR
       AssignElasticIP:
         default: Assign elastic IP
-      MigrateServerHostName:
-        default: Migrate server host name
+      MigrateServerHostname:
+        default: Hostname
       MigrateAdminUsername:
-        default: Migrate admin username
+        default: Admin username
       MigrateAdminPassword:
-        default: Migrate admin password
+        default: Admin password
       MigrateServerInstanceType:
         default: Migrate server instance type
       SNSTopicMailID:
@@ -76,18 +79,15 @@ Metadata:
       QSS3KeyPrefix:
         default: Quick Start S3 key prefix        
 Parameters:
-  MigrateServerHostName:
+  MigrateServerHostname:
     Description: >-
-      (Optional) The name for your PlateSpin Migrate server instance. Maximum number of allowed characters is 15. Leave blank to automatically generate the instance name based on the stack name. 
+      The hostname for your PlateSpin Migrate server. Maximum number of allowed characters is 15.
     Type: String
-    Default: ''
-    AllowedPattern: >-
-      (?=.{0,15}$)[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,13}[0-9A-Za-z])?(?:[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?)*|
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
     ConstraintDescription: >-
-      Must begin with a letter and contain only alphanumeric characters. Maximum
-      length upto 15 characters.
+      Must begin with a letter and contain only alphanumeric characters. Maximum length upto 15 characters.
   MigrateAdminUsername:
-    Description: The username for the Migrate server admin account.
+    Description: The username for the PlateSpin Migrate Server admin account.
     Type: String
     Default: migrateadmin
     MinLength: '5'
@@ -95,7 +95,7 @@ Parameters:
     AllowedPattern: '[a-zA-Z0-9]*'
   MigrateAdminPassword:
     Description: >-
-      The password for the Migrate server admin account. It must be at least 8 characters containing letters, numbers and symbols
+      The password for the PlateSpin Migrate Server admin account. It must be at least 8 characters containing letters, numbers and symbols.
     Type: String
     MinLength: '8'
     MaxLength: '32'
@@ -103,7 +103,7 @@ Parameters:
       (?=^.{6,255}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9])(?=.*[a-z])|(?=.*[^A-Za-z0-9])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9]))^.*
     NoEcho: 'true'
   MigrateServerInstanceType:
-    Description: The EC2 instance type for your PlateSpin Migrate Server instance.
+    Description: The Amazon EC2 instance type for your PlateSpin Migrate server.
     Type: String
     Default: t2.large
     AllowedValues:
@@ -116,15 +116,13 @@ Parameters:
     ConstraintDescription: Must be a valid EC2 instance type.
   KeyPairName:
     Description: >-
-      The name of an existing EC2 key pair, which allows you to
-      securely connect to your instance after it launches.
+      The name of an existing EC2 key pair, which allows you to securely connect to your instance after it launches.
     Type: 'AWS::EC2::KeyPair::KeyName'
     AllowedPattern: .+
     ConstraintDescription: Must be the name of an existing EC2 key pair.
   AssignElasticIP:
     Description: >-
-      By default, a persistent public IP address (EIP) is created and associated for the Migrate server. 
-      Choose No to request a public IP address from Amazon's public IP address pool.
+      Choose No to request a public IP address from Amazon's pool. Note that this IP will be changed when the instance is stopped and restarted.
     Type: String
     AllowedValues:
       - 'Yes'
@@ -132,8 +130,7 @@ Parameters:
     Default: 'Yes'
   SNSTopicMailID:
     Description: >-
-      The email ID to which AWS CloudWatch alarm notifications about the 
-      PlateSpin Migrate Server instance will be sent.
+      The email ID to which AWS CloudWatch alarm notifications about the PlateSpin Migrate server instance will be sent.
     Type: String
     AllowedPattern: '^[\x20-\x45]?[\w-\+]+(\.[\w]+)*@[\w-]+(\.[\w]+)*(\.[a-z]{2,})$'
     ConstraintDescription: Must be a valid email ID.
@@ -241,7 +238,7 @@ Resources:
         MigrateServerInstanceType: !Ref MigrateServerInstanceType
         KeyPairName: !Ref KeyPairName
         AssignElasticIP: !Ref AssignElasticIP
-        MigrateServerHostName: !Ref MigrateServerHostName
+        MigrateServerHostname: !Ref MigrateServerHostname
         MigrateAdminUsername: !Ref MigrateAdminUsername
         MigrateAdminPassword: !Ref MigrateAdminPassword
         PublicSubnetID: !GetAtt 
