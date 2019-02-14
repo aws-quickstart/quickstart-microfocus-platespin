@@ -189,12 +189,14 @@ Mappings:
       PSM201811AMI: PlateSpin 2018.11 T3
     us-west-2:
       PSM201811AMI: ami-06937399f4d21e7a9
+    ap-south-1:
+      PSM201811AMI: ami-0e8d0f65b2b3ef667
 Resources:
   ServerSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupName: !Join 
-        - _
+        - '-'
         - - !Ref 'AWS::StackName'
           - PSMServer
           - SG
@@ -230,7 +232,7 @@ Resources:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupName: !Join 
-        - _
+        - '-'
         - - !Ref 'AWS::StackName'
           - PSMReplication
           - SG
@@ -258,7 +260,7 @@ Resources:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupName: !Join 
-        - _
+        - '-'
         - - !Ref 'AWS::StackName'
           - PSMProduction
           - SG
@@ -274,7 +276,7 @@ Resources:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupName: !Join 
-        - _
+        - '-'
         - - !Ref 'AWS::StackName'
           - PSMTest
           - SG
