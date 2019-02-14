@@ -24,11 +24,11 @@ Metadata:
           - TargetAccessCIDR
           - SNSTopicMailID
       - Label:
-          default: PlateSpin Migrate Server configuration
+          default: PlateSpin Migrate server configuration
         Parameters:
           - MigrateServerHostname
           - MigrateAdminUsername
-          - MigrateAdminPassword      
+          - MigrateAdminPassword
       - Label:
           default: AWS Quick Start configuration
         Parameters:
@@ -66,13 +66,13 @@ Metadata:
 Parameters:
   MigrateServerHostname:
     Description: >-
-      The hostname for your PlateSpin Migrate server. Maximum number of allowed characters is 15.
+      The hostname for your PlateSpin Migrate server atleast 5 characters long. Maximum number of allowed characters is 15.
     Type: String
     MinLength: '5'
     MaxLength: '15'
     AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
     ConstraintDescription: >-
-      Must begin with a letter and contain only alphanumeric characters. Maximum length upto 15 characters.
+      Must begin with a letter and contain only alphanumeric characters. Minimum length of 5 characters. Maximum length upto 15 characters.
   MigrateAdminUsername:
     Description: The username for the PlateSpin Migrate server admin account.
     Type: String
@@ -149,7 +149,7 @@ Parameters:
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
     Description: >-
       The CIDR range from which the PlateSpin Migrate target workloads can be accessed through all TCP ports. 
-      For example, to get full access, specify 0.0.0.0/0.
+      For example, to get full access within the selected VPC, specify the CIDR of the VPC.
     Type: String
     Default: 0.0.0.0/0
   SNSTopicMailID:
@@ -168,8 +168,7 @@ Parameters:
     Default: aws-quickstart-migrate
     Description: >-
       The name of the S3 bucket that stores the Quick Start assets. 
-      This name can include numbers, lowercase letters, uppercase letters, and hyphens (-). 
-      However, it cannot start or end with a hyphen.
+      The bucket name can include numbers, lowercase letters, uppercase letters, and hyphens, but should not start or end with a hyphen
     Type: String
   QSS3KeyPrefix:
     AllowedPattern: '^[0-9a-zA-Z-/]*$'
@@ -178,8 +177,7 @@ Parameters:
       letters, hyphens (-), and forward slash (/).
     Default: platespin-migrate/
     Description: >-
-      The S3 key prefix for the Quick Start assets. 
-      The key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/).
+      The S3 key name prefix for the Quick Start assets. This prefix can include numbers, lowercase letters, uppercase letters, hyphens, and forward slashes.
     Type: String
 Conditions:
   AutoAssignEIP: !Equals 
@@ -207,12 +205,27 @@ Resources:
           FromPort: '443'
           ToPort: '443'
           CidrIp: !Ref ServerAccessCIDR
-          Description: HTTPS
+          Description: HTTPS from customer network
+        - IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+          SourceSecurityGroupId: !GetAtt ReplicationSecurityGroup.GroupId
+          Description: HTTPS from PSM Replication SG 
+        - IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+          SourceSecurityGroupId: !GetAtt ProductionSecurityGroup.GroupId
+          Description: HTTPS from PSM Production SG
+        - IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+          SourceSecurityGroupId: !GetAtt TestSecurityGroup.GroupId
+          Description: HTTPS from PSM Test SG
         - IpProtocol: tcp
           FromPort: '3389'
           ToPort: '3389'
           CidrIp: !Ref HostAccessCIDR
-          Description: RDP
+          Description: RDP from remote admin machine
   ReplicationSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -225,15 +238,22 @@ Resources:
       VpcId: !Ref VPCID
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: '22'
-          ToPort: '22'
-          CidrIp: 0.0.0.0/0
-          Description: SSH
-        - IpProtocol: tcp
           FromPort: '3725'
           ToPort: '3725'
           CidrIp: !Ref ServerAccessCIDR
-          Description: Data Transfer
+          Description: Data Transfer from Source in customer network
+  ReplicationSGInboundRule:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !GetAtt ReplicationSecurityGroup.GroupId
+      IpProtocol: tcp
+      FromPort: '22'
+      ToPort: '22'
+      CidrIp: !Join 
+        - /
+        - - !GetAtt MigrateServerInstance.PrivateIp
+          - 32
+      Description: SSH from Migrate Server
   ProductionSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -242,14 +262,14 @@ Resources:
         - - !Ref 'AWS::StackName'
           - PSMProduction
           - SG
-      GroupDescription: 'Allow access for all TCP ports'
+      GroupDescription: 'Allow access for all TCP ports within same VPC'
       VpcId: !Ref VPCID
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: '0'
           ToPort: '65535'
           CidrIp: !Ref TargetAccessCIDR
-          Description: All TCP
+          Description: All TCP from within VPC
   TestSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -258,14 +278,14 @@ Resources:
         - - !Ref 'AWS::StackName'
           - PSMTest
           - SG
-      GroupDescription: 'Allow access for all TCP ports'
+      GroupDescription: 'Allow access for all TCP ports within same VPC'
       VpcId: !Ref VPCID
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: '0'
           ToPort: '65535'
           CidrIp: !Ref TargetAccessCIDR
-          Description: All TCP
+          Description: All TCP from within VPC
   MigratePolicy:
     Type: 'AWS::IAM::Policy'
     Properties:
