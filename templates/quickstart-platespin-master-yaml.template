@@ -262,3 +262,6 @@ Outputs:
   MigrateServerInstanceID:
     Description: The PlateSpin Migrate server EC2 instance ID
     Value: !GetAtt PlateSpinMigrateStack.Outputs.MigrateServerInstanceID
+  MigrateServerLogGroupName:
+    Description: The name of the CloudWatch log group
+    Value: !Ref PlateSpinMigrateStack.Outputs.MigrateServerLogGroupName

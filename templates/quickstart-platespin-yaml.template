@@ -372,9 +372,13 @@ Resources:
               - 'arn:aws:ec2:*::image/*'
           - Sid: VisualEditor5
             Effect: Allow
-            Action: 's3:GetObject'
+            Action: 
+              - 's3:GetObject'
+              - 'logs:Create*'
+              - 'logs:PutLogEvents'
             Resource:
               - 'arn:aws:s3:::${QSS3BucketName}/${QSS3KeyPrefix}*'
+              - 'arn:aws:logs:*:*:*'
       Roles:
         - !Ref MigrateRole
   MigrateRole:
@@ -417,6 +421,7 @@ Resources:
             - fetchResources
             - prepare
             - setup
+            - enableCWLogs
             - finalize
         fetchResources:
           files:
@@ -480,12 +485,119 @@ Resources:
                   - !Ref MigrateServerHostname
                   - '''"'
               waitAfterCompletion: forever
-            3-wait-for-command-execution:
-              command: powershell.exe -command Start-Sleep -Seconds 60
+        enableCWLogs:
+          files:
+            C:\Program Files\Amazon\SSM\Plugins\awsCloudWatch\AWS.EC2.Windows.CloudWatch.json:
+              content: !Sub |
+                {
+                  "EngineConfiguration": {
+                      "Components": [
+                          {
+                              "FullName": "AWS.EC2.Windows.CloudWatch.EventLog.EventLogInputComponent,AWS.EC2.Windows.CloudWatch",
+                              "Id": "ApplicationEventLog",
+                              "Parameters": {
+                                  "Levels": "7",
+                                  "LogName": "Application"
+                              }
+                          },
+                          {
+                              "FullName": "AWS.EC2.Windows.CloudWatch.EventLog.EventLogInputComponent,AWS.EC2.Windows.CloudWatch",
+                              "Id": "SystemEventLog",
+                              "Parameters": {
+                                  "Levels": "7",
+                                  "LogName": "System"
+                              }
+                          },
+                          {
+                              "FullName": "AWS.EC2.Windows.CloudWatch.EventLog.EventLogInputComponent,AWS.EC2.Windows.CloudWatch",
+                              "Id": "SecurityEventLog",
+                              "Parameters": {
+                                  "Levels": "7",
+                                  "LogName": "Security"
+                              }
+                          },
+                          {
+                              "FullName": "AWS.EC2.Windows.CloudWatch.CustomLog.CustomLogInputComponent,AWS.EC2.Windows.CloudWatch",
+                              "Id": "CfnInitLog",
+                              "Parameters": {
+                                  "CultureName": "en-US",
+                                  "Encoding": "ASCII",
+                                  "Filter": "cfn-init.log",
+                                  "LogDirectoryPath": "C:\\cfn\\log",
+                                  "TimeZoneKind": "Local",
+                                  "TimestampFormat": "yyyy-MM-dd HH:mm:ss,fff"
+                              }
+                          },
+                          {
+                              "FullName": "AWS.EC2.Windows.CloudWatch.CloudWatchLogsOutput,AWS.EC2.Windows.CloudWatch",
+                              "Id": "CloudWatchApplicationEventLog",
+                              "Parameters": {
+                                  "AccessKey": "",
+                                  "LogGroup": "${MigrateServerLogGroup}",
+                                  "LogStream": "{instance_id}/ApplicationEventLog",
+                                  "Region": "${AWS::Region}",
+                                  "SecretKey": ""
+                              }
+                          },
+                          {
+                              "FullName": "AWS.EC2.Windows.CloudWatch.CloudWatchLogsOutput,AWS.EC2.Windows.CloudWatch",
+                              "Id": "CloudWatchSystemEventLog",
+                              "Parameters": {
+                                  "AccessKey": "",
+                                  "LogGroup": "${MigrateServerLogGroup}",
+                                  "LogStream": "{instance_id}/SystemEventLog",
+                                  "Region": "${AWS::Region}",
+                                  "SecretKey": ""
+                              }
+                          },
+                          {
+                              "FullName": "AWS.EC2.Windows.CloudWatch.CloudWatchLogsOutput,AWS.EC2.Windows.CloudWatch",
+                              "Id": "CloudWatchSecurityEventLog",
+                              "Parameters": {
+                                  "AccessKey": "",
+                                  "LogGroup": "${MigrateServerLogGroup}",
+                                  "LogStream": "{instance_id}/SecurityEventLog",
+                                  "Region": "${AWS::Region}",
+                                  "SecretKey": ""
+                              }
+                          },
+                          {
+                              "FullName": "AWS.EC2.Windows.CloudWatch.CloudWatchLogsOutput,AWS.EC2.Windows.CloudWatch",
+                              "Id": "CloudWatchCfnInitLog",
+                              "Parameters": {
+                                  "AccessKey": "",
+                                  "LogGroup": "${MigrateServerLogGroup}",
+                                  "LogStream": "{instance_id}/CfnInitLog",
+                                  "Region": "${AWS::Region}",
+                                  "SecretKey": ""
+                              }
+                          }
+                      ],
+                      "Flows": {
+                          "Flows": [
+                              "ApplicationEventLog,CloudWatchApplicationEventLog",
+                              "SystemEventLog,CloudWatchSystemEventLog",
+                              "SecurityEventLog,CloudWatchSecurityEventLog",
+                              "CfnInitLog,CloudWatchCfnInitLog"
+                          ]
+                      },
+                      "PollInterval": "00:00:05"
+                  },
+                  "IsEnabled": true
+                }
+          commands:
+            1-enable-ssm:
+              command: powershell.exe -Command "Set-Service -Name AmazonSSMAgent -StartupType Automatic"
               waitAfterCompletion: '0'
+            2-restart-ssm:
+              command: powershell.exe -Command "Restart-Service AmazonSSMAgent"
+              waitAfterCompletion: '30'
         finalize:
           commands:
-            1-signal-success:
+            1-take-a-break:
+              command: powershell.exe -command Start-Sleep -Seconds 60
+              waitAfterCompletion: '0'
+            2-signal-success:
               command: powershell.exe -Command "Write-AWSQuickStartStatus"
               waitAfterCompletion: '0'
     Properties:
@@ -528,6 +640,10 @@ Resources:
       ResourceSignal:
         Count: '1'
         Timeout: PT45M
+  MigrateServerLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      RetentionInDays: '7'
   RecoveryAlarm:
     Type: 'AWS::CloudWatch::Alarm'
     Properties:
@@ -589,3 +705,6 @@ Outputs:
   MigrateServerInstanceID:
     Description: The PlateSpin Migrate server EC2 instance ID
     Value: !Ref MigrateServerInstance
+  MigrateServerLogGroupName:
+    Description: The name of the CloudWatch log group
+    Value: !Ref MigrateServerLogGroup
