@@ -11,8 +11,49 @@
         "ParameterKey": "SNSTopicMailID",
         "ParameterValue": "operator@example.com"
     },
-    {
-        "ParameterKey": "RemoteAccessCIDR",
+	{
+        "ParameterKey": "ReplicationAccessCIDR",
         "ParameterValue": "0.0.0.0/0"
+    },
+    {
+        "ParameterKey": "ManagementAccessCIDR",
+        "ParameterValue": "0.0.0.0/0"
+    },
+    {
+        "ParameterKey": "VPCAccessCIDR",
+        "ParameterValue": "0.0.0.0/0"
+    },
+    {
+        "ParameterKey": "MigrateServerHostname",
+        "ParameterValue": "Migrate"
+    },
+    {
+        "ParameterKey": "MigrateAdminPassword",
+        "ParameterValue": "password@1"
+    },
+	{
+        "ParameterKey": "VPCCIDR",
+        "ParameterValue": "10.0.0.0/16"
+    },
+	{
+        "ParameterKey": "PublicSubnet1CIDR",
+        "ParameterValue": "10.0.128.0/20"
+    },
+    {
+        "ParameterKey": "PublicSubnet2CIDR",
+        "ParameterValue": "10.0.144.0/20"
+    },
+    {
+        "ParameterKey": "PrivateSubnet1CIDR",
+        "ParameterValue": "10.0.0.0/19"
+    },
+    {
+        "ParameterKey": "PrivateSubnet2CIDR",
+        "ParameterValue": "10.0.32.0/19"
+    },
+	{
+        "ParameterKey": "AssignElasticIP",
+        "ParameterValue": "No"
     }
 ]
+	
