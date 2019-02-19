@@ -31,10 +31,10 @@ Metadata:
           - KeyPairName
           - ReplicationAccessCIDR
           - ManagementAccessCIDR
-          - VPCAccessCIDR
+          - TargetWorkloadsInterconnectCIDR
           - SNSTopicMailID
       - Label:
-          default: PlateSpin Migrate Server configuration
+          default: PlateSpin Migrate server configuration
         Parameters:
           - MigrateServerHostname
           - MigrateAdminUsername
@@ -60,11 +60,11 @@ Metadata:
       VPCCIDR:
         default: VPC CIDR
       ReplicationAccessCIDR:
-        default: Migrate server access CIDR
+        default: Replication access CIDR
       ManagementAccessCIDR:
-        default: Migrate host access CIDR
-      VPCAccessCIDR:
-        default: Target workloads access CIDR
+        default: Management access CIDR
+      TargetWorkloadsInterconnectCIDR:
+        default: Target workloads interconnect CIDR
       AssignElasticIP:
         default: Assign elastic IP
       MigrateServerHostname:
@@ -84,15 +84,15 @@ Metadata:
 Parameters:
   MigrateServerHostname:
     Description: >-
-      The hostname for your PlateSpin Migrate server atleast 5 characters long. Maximum number of allowed characters is 15.
+      The hostname for your PlateSpin Migrate server (up to 15 characters). This name can contain alphanumeric characters, and hyphens, but should start with a letter and can not end with a hyphen.
     Type: String
-    MinLength: '5'
+    Default: PSMigrate
     MaxLength: '15'
-    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    AllowedPattern: '^[a-zA-Z]|([a-zA-Z][a-zA-Z0-9\-]*[a-zA-Z0-9]$)'
     ConstraintDescription: >-
-      Must begin with a letter and contain only alphanumeric characters. Minimum length of 5 characters. Maximum length upto 15 characters.
+      Must begin with a letter, contain alphanumeric characters and hyphens, and can not end with a hyphen. Maximum length upto 15 characters.
   MigrateAdminUsername:
-    Description: The username for the PlateSpin Migrate Server admin account.
+    Description: The username for the PlateSpin Migrate server admin account. This name must be of 5-25 length containing only alphanumeric characters.
     Type: String
     Default: migrateadmin
     MinLength: '5'
@@ -100,7 +100,16 @@ Parameters:
     AllowedPattern: '[a-zA-Z0-9]*'
   MigrateAdminPassword:
     Description: >-
-      The password for the PlateSpin Migrate Server admin account. It must be at least 8 characters containing letters, numbers and symbols.
+      The password for the PlateSpin Migrate server admin account. This password must be of 8-32 length containing letters, numbers and symbols.
+    Type: String
+    MinLength: '8'
+    MaxLength: '32'
+    AllowedPattern: >-
+      (?=^.{6,255}$)((?=.*\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[^A-Za-z0-9])(?=.*[a-z])|(?=.*[^A-Za-z0-9])(?=.*[A-Z])(?=.*[a-z])|(?=.*\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9]))^.*
+    NoEcho: 'true'
+  MigrateAdminConfirmPassword:
+    Description: >-
+      Confirm the password for the PlateSpin Migrate server admin account.
     Type: String
     MinLength: '8'
     MaxLength: '32'
@@ -135,7 +144,7 @@ Parameters:
     Default: 'Yes'
   SNSTopicMailID:
     Description: >-
-      The email ID to which AWS CloudWatch alarm notifications about the PlateSpin Migrate server instance will be sent.
+      The email ID to which AWS CloudWatch alarm notifications about the PlateSpin Migrate server will be sent.
     Type: String
     AllowedPattern: '^[\x20-\x45]?[\w-\+]+(\.[\w]+)*@[\w-]+(\.[\w]+)*(\.[a-z]{2,})$'
     ConstraintDescription: Must be a valid email ID.
@@ -200,10 +209,10 @@ Parameters:
       ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
     Description: >-
-      The CIDR range from which the PlateSpin Migrate server and target instances can be accessed through RDP. 
+      The CIDR range from which the PlateSpin Migrate server and target instances can be accessed through RDP and SSH. 
       For example, to get full access, specify 0.0.0.0/0.
     Type: String
-  VPCAccessCIDR:
+  TargetWorkloadsInterconnectCIDR:
     AllowedPattern: >-
       ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
@@ -258,15 +267,18 @@ Resources:
         
         ReplicationAccessCIDR: !Ref ReplicationAccessCIDR
         ManagementAccessCIDR: !Ref ManagementAccessCIDR
-        VPCAccessCIDR: !Ref VPCAccessCIDR
+        TargetWorkloadsInterconnectCIDR: !Ref TargetWorkloadsInterconnectCIDR
         SNSTopicMailID: !Ref SNSTopicMailID
 Outputs:
   MigrateServerURL:
-    Description: The public URL of the deployed PlateSpin Migrate server
+    Description: The URL of the deployed PlateSpin Migrate server
     Value: !GetAtt PlateSpinMigrateStack.Outputs.MigrateServerURL
   MigrateServerIP:
-    Description: The public IP address of the deployed PlateSpin Migrate server instance
+    Description: The IP address of the deployed PlateSpin Migrate server instance
     Value: !GetAtt PlateSpinMigrateStack.Outputs.MigrateServerIP
   MigrateServerInstanceID:
     Description: The PlateSpin Migrate server EC2 instance ID
     Value: !GetAtt PlateSpinMigrateStack.Outputs.MigrateServerInstanceID
+  MigrateServerLogGroupName:
+    Description: The name of the CloudWatch log group
+    Value: !GetAtt PlateSpinMigrateStack.Outputs.MigrateServerLogGroup

@@ -32,6 +32,10 @@
         "ParameterValue": "password@1"
     },
 	{
+        "ParameterKey": "MigrateAdminConfirmPassword",
+        "ParameterValue": "password@1"
+    },
+	{
         "ParameterKey": "VPCCIDR",
         "ParameterValue": "10.0.0.0/16"
     },
@@ -53,7 +57,7 @@
     },
 	{
         "ParameterKey": "AssignElasticIP",
-        "ParameterValue": "No"
+        "ParameterValue": "Yes"
     }
 ]
 	
