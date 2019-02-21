@@ -79,7 +79,7 @@ Parameters:
   MigrateAdminUsername:
     Description: The username for the PlateSpin Migrate server admin account. This name must be of 5-25 length containing only alphanumeric characters.
     Type: String
-    Default: migrateadmin
+    Default: psadmin
     MinLength: '5'
     MaxLength: '25'
     AllowedPattern: '[a-zA-Z0-9]*'
@@ -205,9 +205,9 @@ Conditions:
 Mappings:
   AWSAMIRegionMap:
     AMI:
-      PSM201811AMI: PlateSpin 2018.11 T3
+      PSM201811AMI: PSM 2018.11 T10
     us-west-2:
-      PSM201811AMI: ami-06937399f4d21e7a9
+      PSM201811AMI: ami-0b976fe3a00136338
     ap-south-1:
       PSM201811AMI: ami-0e8d0f65b2b3ef667
 Resources:
@@ -438,7 +438,11 @@ Resources:
       AllocationId: !GetAtt PublicStaticIP.AllocationId
       NetworkInterfaceId: !Ref MigrateServerNetworkInterface
   MigrateServerInstance:
-    Type: 'AWS::EC2::Instance'    
+    Type: 'AWS::EC2::Instance'
+    CreationPolicy:
+      ResourceSignal:
+        Count: '1'
+        Timeout: PT60M
     Metadata:
       'AWS::CloudFormation::Authentication':
         S3AccessCreds:
@@ -449,18 +453,21 @@ Resources:
       'AWS::CloudFormation::Init':
         configSets:
           config:
+            - installTools
             - enableCWLogs
             - prepare
-            - !If
-              - AutoAssignEIP
-              - noOperation
-              - updateAltAddress
             - setup
             - finalize
-        noOperation:
+        installTools:
+          files:
+            'C:\cfn\assets\GoogleChromeStandaloneEnterprise64.msi':
+              source: >-
+                https://dl.google.com/edgedl/chrome/install/GoogleChromeStandaloneEnterprise64.msi
           commands:
-            1-no-operation:
-              command: echo "No-Operation" > nul
+            1-install-chrome:
+              command: >-
+                start /wait c:\cfn\assets\GoogleChromeStandaloneEnterprise64.msi
+                /quiet /passive
               waitAfterCompletion: '0'
         enableCWLogs:
           files:
@@ -617,24 +624,27 @@ Resources:
             2-restart-ssm-agent:
               command: powershell.exe -Command "Restart-Service AmazonSSMAgent"
               ignoreErrors: true
-              waitAfterCompletion: '30'
+              waitAfterCompletion: '0'
         prepare:
           files:
             'C:\cfn\scripts\Unzip-Archive.ps1':
               source: !Sub >-
-                  https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Unzip-Archive.ps1
+                  https://${QSS3BucketName}.s3-${AWS::Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Unzip-Archive.ps1
             'C:\cfn\modules\AWSQuickStart.zip':
               source: !Sub >-
-                  https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/modules/AWSQuickStart.zip
+                  https://${QSS3BucketName}.s3-${AWS::Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/modules/AWSQuickStart.zip
             'C:\cfn\scripts\Join-Domain.ps1':
               source: !Sub >-
-                  https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Join-Domain.ps1
+                  https://${QSS3BucketName}.s3-${AWS::Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Join-Domain.ps1
             'C:\cfn\scripts\Rename-Computer.ps1':
               source: !Sub >-
-                  https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Rename-Computer.ps1
+                  https://${QSS3BucketName}.s3-${AWS::Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Rename-Computer.ps1
             'C:\cfn\scripts\Create-MigrateAdmin.ps1':
               source: !Sub >-
-                  https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}scripts/Create-MigrateAdmin.ps1
+                  https://${QSS3BucketName}.s3-${AWS::Region}.amazonaws.com/${QSS3KeyPrefix}scripts/Create-MigrateAdmin.ps1
+            'C:\cfn\scripts\Provision.ps1':
+              source: !Sub >-
+                  https://${QSS3BucketName}.s3-${AWS::Region}.amazonaws.com/${QSS3KeyPrefix}scripts/Provision.ps1
             'C:\cfn\cfn-hup.conf':
               content: !Sub |
                 [main]
@@ -658,15 +668,18 @@ Resources:
                   - 'C:\cfn\hooks.d\cfn-auto-reloader.conf'
           commands:
             1-set-execution-policy:
-              command: >-
-                powershell.exe -Command "Set-ExecutionPolicy RemoteSigned
-                -Force"
+              command:
+                powershell.exe
+                  -Command "Set-ExecutionPolicy RemoteSigned"
+                  -Force
+              ignoreErrors: true
               waitAfterCompletion: '0'
             2-unpack-quickstart-module:
-              command: >-
-                powershell.exe -Command C:\cfn\scripts\Unzip-Archive.ps1 -Source
-                C:\cfn\modules\AWSQuickStart.zip -Destination
-                C:\Windows\system32\WindowsPowerShell\v1.0\Modules\
+              command:
+                powershell.exe
+                  -File C:\cfn\scripts\Unzip-Archive.ps1
+                    -Source C:\cfn\modules\AWSQuickStart.zip
+                    -Destination C:\Windows\system32\WindowsPowerShell\v1.0\Modules\
               waitAfterCompletion: '0'
             3-init-quickstart-module:
               command: !Sub
@@ -690,25 +703,23 @@ Resources:
                   - '''"'
               waitAfterCompletion: '0'
             2-rename-computer:
+              command: !Sub
+                - powershell.exe
+                    -File C:\cfn\scripts\Rename-Computer.ps1
+                      -NewName ${InstanceHostname}
+                      -Restart
+                - InstanceHostname: !Ref MigrateServerHostname
+              waitAfterCompletion: forever
+            3-provision-migrate-server:
               command: !Join 
                 - ''
                 - - >-
-                    powershell.exe -Command "C:\cfn\scripts\Rename-Computer.ps1
-                    -Restart -NewName '
-                  - !Ref MigrateServerHostname
-                  - '''"'
-              waitAfterCompletion: forever                
-        updateAltAddress:
-          commands:
-            1-update-alt-address:
-              command: !Sub
-                C:\Windows\OEM\ForgeApplianceConfigurator\ForgeApplianceConfigurator.exe 
-                  /skip_network_config
-                  /hosting_cloud="aws"
-                  /alternate_address=""
-                  /log=C:\Windows\OEM\Provision.log
-              ignoreErrors: true
-              waitAfterCompletion: 0
+                    powershell.exe -File C:\cfn\scripts\Provision.ps1
+                  - !If
+                    - AutoAssignEIP
+                    - ' -UsePublicIP'
+                    - !Ref 'AWS::NoValue'
+              waitAfterCompletion: '0'
         finalize:
           commands:
             1-signal-success:
@@ -722,6 +733,11 @@ Resources:
         - PSM201811AMI
       KeyName: !Ref KeyPairName
       IamInstanceProfile: !Ref MigrateInstanceProfile
+      BlockDeviceMappings:
+        - DeviceName: '/dev/sda1'
+          Ebs:
+            VolumeSize: '70'
+            DeleteOnTermination: "true"
       NetworkInterfaces: !If
         - AutoAssignEIP
         - -
@@ -758,10 +774,6 @@ Resources:
               rem Run  cfn-init helper to process AWS::CloudFormation::Init directives
               cfn-init.exe -v -c config -s ${AWS::StackName} --resource MigrateServerInstance --region ${AWS::Region}
             </script>
-    CreationPolicy:
-      ResourceSignal:
-        Count: '1'
-        Timeout: PT60M
   MigrateServerLogGroup:
     Type: 'AWS::Logs::LogGroup'
     Properties:

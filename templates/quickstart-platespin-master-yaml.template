@@ -25,7 +25,7 @@ Metadata:
           - PrivateSubnet2CIDR
       - Label:
           default: Amazon EC2 configuration
-        Parameters:         
+        Parameters:
           - MigrateServerInstanceType
           - AssignElasticIP
           - KeyPairName
@@ -39,6 +39,7 @@ Metadata:
           - MigrateServerHostname
           - MigrateAdminUsername
           - MigrateAdminPassword
+          - MigrateAdminConfirmPassword
       - Label:
           default: AWS Quick Start configuration
         Parameters:
@@ -73,6 +74,8 @@ Metadata:
         default: Admin username
       MigrateAdminPassword:
         default: Admin password
+      MigrateAdminConfirmPassword:
+        default: Admin confirm password
       MigrateServerInstanceType:
         default: Migrate server instance type
       SNSTopicMailID:
@@ -258,6 +261,7 @@ Resources:
         MigrateServerHostname: !Ref MigrateServerHostname
         MigrateAdminUsername: !Ref MigrateAdminUsername
         MigrateAdminPassword: !Ref MigrateAdminPassword
+        MigrateAdminConfirmPassword: !Ref MigrateAdminConfirmPassword
         PublicSubnetID: !GetAtt 
           - VPCStack
           - Outputs.PublicSubnet1ID

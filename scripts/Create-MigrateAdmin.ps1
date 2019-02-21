@@ -19,21 +19,28 @@ try {
     $user.setinfo()
     $user.description = "Migrate administrator created by Amazon QuickStart"
     $user.SetInfo()
+    $user.UserFlags = 65536
+    $user.SetInfo()
 
     Write-Verbose "Adding $Name to local admin group"
     $localAdminGroup = [ADSI]"WinNT://$($env:COMPUTERNAME)/administrators, group"
     $localAdminGroup.Add($user.Path)
-    
+
     $psAdminGroupName = "PlateSpin Administrators"
     Write-Verbose "Adding $Name to $psAdminGroupName group"
     $psAdminGroup = [ADSI]"WinNT://$($env:COMPUTERNAME)/$psAdminGroupName, group"
     $psAdminGroup.Add($user.Path)
-    
+
     $wcAdminGroupName = "Workload Conversion Administrators"
     Write-Verbose "Adding $Name to $wcAdminGroupName group"
     $wcAdminGroup = [ADSI]"WinNT://$($env:COMPUTERNAME)/$wcAdminGroupName, group"
     $wcAdminGroup.Add($user.Path)
 
+    $rdUsersGroupName = "Remote Desktop Users"
+    Write-Verbose "Adding $Name to $rdUsersGroupName group"
+    $rdUsersGroup = [ADSI]"WinNT://$($env:COMPUTERNAME)/$rdUsersGroupName, group"
+    $rdUsersGroup.Add($user.Path)
+    
     Write-Verbose "Admin user $Name created successfully."
 }
 catch {
