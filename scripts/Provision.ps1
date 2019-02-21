@@ -1,7 +1,10 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$false)]
-    [switch]$UsePublicIP
+    [switch]$UsePublicIP,
+
+    [Parameter(Mandatory=$false)]
+    [switch]LeaveResources
 )
 try {
 
@@ -23,11 +26,19 @@ try {
             Write-Verbose "Got public IP: $publicIp"
         }
     }
+    else {
+        Write-Verbose "Will do private IP configuration."
+    }
+
+    #Try starting services
+    Start-Service PlateSpin_Management_Service -ErrorAction SilentlyContinue
+    Start-Service OfxController -ErrorAction SilentlyContinue
 
     C:\Windows\OEM\ForgeApplianceConfigurator\ForgeApplianceConfigurator.exe /skip_network_config /cloud_config_only /hosting_cloud="aws" /alternate_address=$publicIp /log=$LogFile
 
-    $defaultDbPassPath = Join-Path "C:\Windows\OEM" DefaultPwd.txt
-    Remove-Item $defaultDbPassPath -Force -Recurse -ErrorAction SilentlyContinue
+    if (-not $LeaveResources) {
+        Remove-Item -Path "C:\Windows\OEM" -Force -Recurse -ErrorAction SilentlyContinue
+    }
 }
 catch {
     Write-Verbose "catch: $_"

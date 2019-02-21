@@ -205,9 +205,9 @@ Conditions:
 Mappings:
   AWSAMIRegionMap:
     AMI:
-      PSM201811AMI: PSM 2018.11 T10
+      PSM201811AMI: PSM 2018.11 AMI S1
     us-west-2:
-      PSM201811AMI: ami-0b976fe3a00136338
+      PSM201811AMI: ami-0a6997f4e66055d6c
     ap-south-1:
       PSM201811AMI: ami-0e8d0f65b2b3ef667
 Resources:
