@@ -4,7 +4,7 @@ param(
     [switch]$UsePublicIP,
 
     [Parameter(Mandatory=$false)]
-    [switch]LeaveResources
+    [switch]$LeaveResources
 )
 try {
 

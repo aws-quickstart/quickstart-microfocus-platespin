@@ -230,6 +230,14 @@ Parameters:
     Description: >-
       The CIDR block for the VPC. This CIDR block must be in the form x.x.x.x/16-28. 
     Type: String
+Rules:
+  'ConfirmPassword':
+    Assertions:
+      - Assert:
+          Fn::Equals:
+            - Ref: 'MigrateAdminPassword'
+            - Ref: 'MigrateAdminConfirmPassword'
+        AssertDescription: 'Migrate admin passwords do not match.'
 Resources:
   VPCStack:
     Type: 'AWS::CloudFormation::Stack'
