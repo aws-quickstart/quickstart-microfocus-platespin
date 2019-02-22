@@ -147,9 +147,9 @@ Parameters:
     Default: 'Yes'
   SNSTopicMailID:
     Description: >-
-      The email ID to which AWS CloudWatch alarm notifications about the PlateSpin Migrate server will be sent.
+      (Optional) The email ID to which AWS CloudWatch alarm notifications about the PlateSpin Migrate server will be sent.
     Type: String
-    AllowedPattern: '^[\x20-\x45]?[\w-\+]+(\.[\w]+)*@[\w-]+(\.[\w]+)*(\.[a-z]{2,})$'
+    AllowedPattern: '^$|[\x20-\x45]?[\w-\+]+(\.[\w]+)*@[\w-]+(\.[\w]+)*(\.[a-z]{2,})'
     ConstraintDescription: Must be a valid email ID.
   AvailabilityZones:
     Description: The list of Availability Zones to use for the subnets in the VPC. Select any two. This Quick Start uses the first two zones from your selected list.
