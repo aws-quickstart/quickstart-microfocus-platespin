@@ -6,6 +6,7 @@ global:
   - us-west-2
   - eu-west-1
   - eu-west-3
+  - ap-south-1
   reporting: true
   s3bucket: aws-quickstart-migrate
 tests:
@@ -14,4 +15,5 @@ tests:
     template_file: quickstart-platespin-master-yaml.template
     regions:
     - us-west-2
+    - ap-south-1
 

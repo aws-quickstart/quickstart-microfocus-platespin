@@ -20,7 +20,7 @@
         "ParameterValue": "0.0.0.0/0"
     },
     {
-        "ParameterKey": "VPCAccessCIDR",
+        "ParameterKey": "TargetWorkloadsInterconnectCIDR",
         "ParameterValue": "0.0.0.0/0"
     },
     {

@@ -87,7 +87,7 @@ Metadata:
 Parameters:
   MigrateServerHostname:
     Description: >-
-      The hostname for your PlateSpin Migrate server (up to 15 characters). This name can contain alphanumeric characters, and hyphens, but should start with a letter and can not end with a hyphen.
+      The hostname (up to 15 characters) for your PlateSpin Migrate server. This name can contain alphanumeric characters and hyphens. It should start with a letter and should not end with a hyphen.
     Type: String
     Default: PSMigrate
     MaxLength: '15'
@@ -95,7 +95,7 @@ Parameters:
     ConstraintDescription: >-
       Must begin with a letter, contain alphanumeric characters and hyphens, and can not end with a hyphen. Maximum length upto 15 characters.
   MigrateAdminUsername:
-    Description: The username for the PlateSpin Migrate server admin account. This name must be of 5-25 length containing only alphanumeric characters.
+    Description: The username for the PlateSpin Migrate server admin account. This name can contain 5 to 25 alphanumeric characters.
     Type: String
     Default: migrateadmin
     MinLength: '5'
@@ -103,7 +103,7 @@ Parameters:
     AllowedPattern: '[a-zA-Z0-9]*'
   MigrateAdminPassword:
     Description: >-
-      The password for the PlateSpin Migrate server admin account. This password must be of 8-32 length containing letters, numbers and symbols.
+      The password for the Migrate server admin account. It can contain 8 to 32 alphanumeric characters and symbols.
     Type: String
     MinLength: '8'
     MaxLength: '32'
@@ -112,7 +112,7 @@ Parameters:
     NoEcho: 'true'
   MigrateAdminConfirmPassword:
     Description: >-
-      Confirm the password for the PlateSpin Migrate server admin account.
+      The password confirmation for the Migrate server admin account. 
     Type: String
     MinLength: '8'
     MaxLength: '32'
@@ -293,4 +293,4 @@ Outputs:
     Value: !GetAtt PlateSpinMigrateStack.Outputs.MigrateServerInstanceID
   MigrateServerLogGroupName:
     Description: The name of the CloudWatch log group
-    Value: !GetAtt PlateSpinMigrateStack.Outputs.MigrateServerLogGroup
+    Value: !GetAtt PlateSpinMigrateStack.Outputs.MigrateServerLogGroupName
