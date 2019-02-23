@@ -1,5 +1,9 @@
 [
     {
+        "ParameterKey": "AssignElasticIP",
+        "ParameterValue": "Yes"
+    },
+    {
         "ParameterKey": "AvailabilityZones",
         "ParameterValue": "$[taskcat_genaz_2]"
     },
@@ -8,44 +12,32 @@
         "ParameterValue": "$[taskcat_getkeypair]"
     },
     {
-        "ParameterKey": "SNSTopicMailID",
-        "ParameterValue": "operator@example.com"
-    },
-	{
-        "ParameterKey": "ReplicationAccessCIDR",
-        "ParameterValue": "0.0.0.0/0"
+        "ParameterKey": "LicenseAgreement",
+        "ParameterValue": "I agree"
     },
     {
         "ParameterKey": "ManagementAccessCIDR",
         "ParameterValue": "0.0.0.0/0"
     },
     {
-        "ParameterKey": "TargetWorkloadsInterconnectCIDR",
-        "ParameterValue": "0.0.0.0/0"
+        "ParameterKey": "MigrateAdminConfirmPassword",
+        "ParameterValue": "password@1"
+    },
+    {
+        "ParameterKey": "MigrateAdminPassword",
+        "ParameterValue": "password@1"
+    },
+    {
+        "ParameterKey": "MigrateAdminUsername",
+        "ParameterValue": "psadmin"
     },
     {
         "ParameterKey": "MigrateServerHostname",
         "ParameterValue": "Migrate"
     },
     {
-        "ParameterKey": "MigrateAdminPassword",
-        "ParameterValue": "password@1"
-    },
-	{
-        "ParameterKey": "MigrateAdminConfirmPassword",
-        "ParameterValue": "password@1"
-    },
-	{
-        "ParameterKey": "VPCCIDR",
-        "ParameterValue": "10.0.0.0/16"
-    },
-	{
-        "ParameterKey": "PublicSubnet1CIDR",
-        "ParameterValue": "10.0.128.0/20"
-    },
-    {
-        "ParameterKey": "PublicSubnet2CIDR",
-        "ParameterValue": "10.0.144.0/20"
+        "ParameterKey": "MigrateServerInstanceType",
+        "ParameterValue": "m5.large"
     },
     {
         "ParameterKey": "PrivateSubnet1CIDR",
@@ -55,9 +47,36 @@
         "ParameterKey": "PrivateSubnet2CIDR",
         "ParameterValue": "10.0.32.0/19"
     },
-	{
-        "ParameterKey": "AssignElasticIP",
-        "ParameterValue": "Yes"
+    {
+        "ParameterKey": "PublicSubnet1CIDR",
+        "ParameterValue": "10.0.128.0/20"
+    },
+    {
+        "ParameterKey": "PublicSubnet2CIDR",
+        "ParameterValue": "10.0.144.0/20"
+    },
+    {
+        "ParameterKey": "QSS3BucketName",
+        "ParameterValue": "$[taskcat_autobucket]"
+    },
+    {
+        "ParameterKey": "QSS3KeyPrefix",
+        "ParameterValue": "quickstart-microfocus-platespin/"
+    },
+    {
+        "ParameterKey": "ReplicationAccessCIDR",
+        "ParameterValue": "0.0.0.0/0"
+    },
+    {
+        "ParameterKey": "SNSTopicMailID",
+        "ParameterValue": "operator@example.com"
+    },
+    {
+        "ParameterKey": "TargetWorkloadsInterconnectCIDR",
+        "ParameterValue": "0.0.0.0/0"
+    },
+    {
+        "ParameterKey": "VPCCIDR",
+        "ParameterValue": "10.0.0.0/16"
     }
 ]
-	
