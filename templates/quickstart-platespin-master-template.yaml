@@ -132,7 +132,6 @@ Parameters:
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
     Description: >-
       The CIDR range from which the PlateSpin Migrate server and target instances can be accessed through RDP and SSH.
-      For example, to get full access, specify 0.0.0.0/0.
     Type: String
   MigrateAdminConfirmPassword:
     Description: >-
@@ -324,7 +323,7 @@ Resources:
         SubnetID: !If
           - AutoAssignEIP
           - !GetAtt VPCStack.Outputs.PublicSubnet1ID
-          - !GetAtt VPCStack.Outputs.PrivateSubnet1ID
+          - !GetAtt VPCStack.Outputs.PrivateSubnet1AID
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
         ReplicationAccessCIDR: !Ref ReplicationAccessCIDR
