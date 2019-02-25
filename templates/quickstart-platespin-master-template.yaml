@@ -212,9 +212,8 @@ Parameters:
       letters, and hyphens (-). It cannot start or end with a hyphen (-).
     Default: aws-quickstart
     Description: >-
-      The name of the S3 bucket that stores the Quick Start assets.
-      This name can include numbers, lowercase letters, uppercase letters, and hyphens (-).
-      However, it cannot start or end with a hyphen.
+      S3 bucket name for the Quick Start assets. Quick Start bucket name can include numbers,
+      lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-).
     Type: String
   QSS3KeyPrefix:
     AllowedPattern: '^[0-9a-zA-Z-/]*$'
@@ -223,8 +222,8 @@ Parameters:
       letters, hyphens (-), and forward slash (/).
     Default: quickstart-microfocus-platespin/
     Description: >-
-      The S3 key prefix for the Quick Start assets.
-      The key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/).
+      S3 key prefix for the Quick Start assets. Quick Start key prefix can include numbers,
+      lowercase letters, uppercase letters, hyphens (-), and forward slash (/).
     Type: String
   ReplicationAccessCIDR:
     AllowedPattern: >-
@@ -300,7 +299,6 @@ Resources:
         PublicSubnet2CIDR: !Ref PublicSubnet2CIDR
         VPCCIDR: !Ref VPCCIDR
   PlateSpinMigrateStack:
-    DependsOn: VPCStack
     Type: 'AWS::CloudFormation::Stack'
     Properties:
       TemplateURL: !Sub

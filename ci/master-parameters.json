@@ -1,4 +1,8 @@
 [
+	{
+        "ParameterKey": "AssignElasticIP",
+        "ParameterValue": "Yes"
+    },
     {
         "ParameterKey": "AssignElasticIP",
         "ParameterValue": "Yes"
