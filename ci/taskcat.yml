@@ -14,18 +14,14 @@ global:
     #- eu-west-1       # EU (Ireland)
     #- eu-west-2       # EU (London)
     #- eu-west-3       # EU (Paris)
-    #- sa-east-1       # South America (São Paulo)
+    #- sa-east-1       # South America (SÃ£o Paulo)
     #- us-east-1       # US East (N. Virginia)
     #- us-east-2       # US East (Ohio)
     #- us-west-1       # US West (N. California)
     - us-west-2       # US West (Oregon)
   reporting: true
-  s3bucket: aws-quickstart-migrate
+
 tests:
   json-master:
     parameter_input: master-parameters.json
-    template_file: quickstart-platespin-master-yaml.template
-    regions:
-    - us-west-2
-    - ap-south-1
-
+    template_file: quickstart-platespin-master-template.yaml
