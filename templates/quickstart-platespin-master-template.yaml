@@ -162,7 +162,7 @@ Parameters:
     Description: >-
       The hostname (up to 15 characters) for your PlateSpin Migrate server. This name can contain alphanumeric characters and hyphens. It should start with a letter and should not end with a hyphen.
     Type: String
-    Default: PSMigrate
+    Default: psmigrate
     MaxLength: '15'
     AllowedPattern: '^[a-zA-Z]|([a-zA-Z][a-zA-Z0-9\-]*[a-zA-Z0-9]$)'
     ConstraintDescription: >-
