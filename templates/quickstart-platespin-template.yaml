@@ -105,7 +105,7 @@ Parameters:
   LicenseAgreement:
     Description: >-
       I have read and agree to the license terms for Micro Focus PlateSpin Migrate
-      (https://www.microfocus.com/licensing/eula/netiq/platespin/platespin_migrate_12_english.pdf).
+      (https://www.microfocus.com/licensing/eula/netiq/platespin/platespin_migrate_2019_english.pdf).
     Type: String
     Default: '-'
     AllowedValues:
@@ -242,39 +242,39 @@ Conditions:
 Mappings:
   AWSAMIRegionMap:
     AMI:
-      PSM201811AMI: PSM 2018.11 AMI S1
+      PSM201811AMI: PlateSpin Migrate 2018.11
     ap-northeast-1:
-      PSM201811AMI: ami-
+      PSM201811AMI: ami-0e358faef92ee7517
     ap-northeast-2:
-      PSM201811AMI: ami-
+      PSM201811AMI: ami-0463947f988b9cf5d
     ap-south-1:
-      PSM201811AMI: ami-08153b525ea4009df
+      PSM201811AMI: ami-09bf631174fc30d23
     ap-southeast-1: 
-      PSM201811AMI: ami-09afbf3002846433e
+      PSM201811AMI: ami-057561c4ea54fdba9
     ap-southeast-2:
-      PSM201811AMI: ami-
+      PSM201811AMI: ami-0d98f59b96706839a
     ca-central-1:
-      PSM201811AMI: ami-
+      PSM201811AMI: ami-015487c35b4528a42
     eu-central-1:
-      PSM201811AMI: ami-
+      PSM201811AMI: ami-02f448a62a019ad25
     eu-north-1:
-      PSM201811AMI: ami-
+      PSM201811AMI: ami-024746edb8b944161
     eu-west-1:
-      PSM201811AMI: ami-
+      PSM201811AMI: ami-03e62918d0428ce6e
     eu-west-2:
-      PSM201811AMI: ami-
+      PSM201811AMI: ami-099c62b81a00b457a
     eu-west-3:
-      PSM201811AMI: ami-
+      PSM201811AMI: ami-0187733190aa6cb8b
     sa-east-1:
-      PSM201811AMI: ami-
+      PSM201811AMI: ami-0ac54404a882ffc87
     us-east-1:
-      PSM201811AMI: ami-
+      PSM201811AMI: ami-00fb6cfd1ac7deeaf
     us-east-2:
-      PSM201811AMI: ami-
+      PSM201811AMI: ami-0816053aef6a8e339
     us-west-1:
-      PSM201811AMI: ami-
+      PSM201811AMI: ami-095db824055999de8
     us-west-2:
-      PSM201811AMI: ami-0a6997f4e66055d6c
+      PSM201811AMI: ami-04a42125a3d85b0d9
 Resources:
   ServerSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
@@ -492,7 +492,7 @@ Resources:
     CreationPolicy:
       ResourceSignal:
         Count: '1'
-        Timeout: PT60M
+        Timeout: PT30M
     Metadata:
       'AWS::CloudFormation::Authentication':
         S3AccessCreds:

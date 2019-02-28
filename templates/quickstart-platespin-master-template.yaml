@@ -119,7 +119,7 @@ Parameters:
   LicenseAgreement:
     Description: >-
       I have read and agree to the license terms for Micro Focus PlateSpin Migrate
-      (https://www.microfocus.com/licensing/eula/netiq/platespin/platespin_migrate_12_english.pdf).
+      (https://www.microfocus.com/licensing/eula/netiq/platespin/platespin_migrate_2019_english.pdf).
     Type: String
     Default: '-'
     AllowedValues:
