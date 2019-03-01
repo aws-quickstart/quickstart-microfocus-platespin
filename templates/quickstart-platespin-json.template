@@ -1,0 +1,585 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "This template creates the Amazon EC2 instance into an existing VPC and related resources for the PlateSpin Migrate Quick Start. ***NOTE*** You must subscribe to the PlateSpin Migrate AMI from the AWS Marketplace before you launch this template. See the deployment guide at http://aws.amazon.com/quickstart for details. This template creates Amazon EC2 instances and related resources. You will be billed for the AWS resources used if you create a stack from this template.",
+    "Metadata": {
+        "AWS::CloudFormation::Interface": {
+            "ParameterGroups": [
+                {
+                    "Label": {
+                        "default": "Network Configuration"
+                    },
+                    "Parameters": [
+                        "VPCID",
+                        "PublicSubnetID",
+                        "RemoteAccessCIDR"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "Amazon EC2 Configuration"
+                    },
+                    "Parameters": [
+                        "KeyPairName",
+                        "WorkloadInstanceType",
+                        "AutoEIP",
+                        "HostName",
+                        "SNSTopicMailID"
+                    ]
+                }
+            ],
+            "ParameterLabels": {
+                "AutoEIP": {
+                    "default": "Auto-assign Elastic IP"
+                },
+                "KeyPairName": {
+                    "default": "Key Pair Name"
+                },
+                "PublicSubnetID": {
+                    "default": "Public Subnet ID"
+                },
+                "RemoteAccessCIDR": {
+                    "default": "Allowed PlateSpin Migrate External Access CIDR"
+                },
+                "VPCID": {
+                    "default": "VPC ID"
+                },
+                "WorkloadInstanceType": {
+                    "default": "Migrate Server Instance Type"
+                },
+                "SNSTopicMailID" : {
+                    "default": "Email ID"
+                }
+            }
+        }
+    },
+    "Resources": {
+        "MigrateServerInstance": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "InstanceType": {
+                    "Ref": "WorkloadInstanceType"
+                },
+                "ImageId": {
+                    "Fn::FindInMap": [
+                        "AWSRegionArch2AMI",
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        "64"
+                    ]
+                },
+                "KeyName": {
+                    "Ref": "KeyPairName"
+                },
+				"IamInstanceProfile" : {
+					  "Ref" : "MigrateInstanceProfile"
+				},
+                "NetworkInterfaces": [
+                    {
+                        "SubnetId": {
+                            "Ref": "PublicSubnetID"
+                        },
+                        "GroupSet": [
+                            {
+                                "Ref": "ServerSecurityGroup"
+                            }
+                        ],
+                        "AssociatePublicIpAddress": "true",
+                        "DeviceIndex": "0",
+                        "DeleteOnTermination": "true"
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::If": [
+                                "GenerateHostName",
+                                {
+                                    "Fn::Join": [
+                                        "-",
+                                        [
+                                            {
+                                                "Ref": "AWS::StackName"
+                                            },
+                                            "MigrateServer"
+                                        ]
+                                    ]
+                                },
+                                {
+                                    "Ref": "HostName"
+                                }
+                            ]
+                        }
+                    }
+                ],
+				"UserData": {
+				  "Fn::Base64": {
+					"Fn::Join": [
+					  "",
+					  [
+						"<script>\n",
+						"cfn-init.exe -v -c config -s ",
+						{
+						  "Ref": "AWS::StackId"
+						},
+						" -r MigrateServerInstance",
+						" --region ",
+						{
+						  "Ref": "AWS::Region"
+						},
+						"\n",
+						"</script>\n"
+					  ]
+					]
+				  }
+				}
+            },
+			 "Metadata": {
+					"AWS::CloudFormation::Designer": {
+						"id": "25b9b2ea-a363-47fc-8fec-fb750efa994b"
+					},
+					"AWS::CloudFormation::Init": {
+					"configSets": {
+						"config": [
+						  "setup",
+						  "rename"
+						]
+					},
+					"setup": {
+						"files": {
+						  "c:\\cfn\\scripts\\Join-domain.ps1": {
+							"content": {
+							  "Fn::Join": [
+								"",
+								[									
+									"$hostname = \"",
+									{ "Ref" : "HostName" } ,
+									"\"",
+									";",
+									" rename-computer $hostname",
+									";",
+									" restart-computer",
+									";"
+								]
+							  ]
+							}
+						  }
+						}
+					},
+					"rename": {
+						"commands": {
+						  "a-set-static-ip": {
+							"command": {
+							  "Fn::Join": [
+								"",
+								[
+								  "powershell.exe -ExecutionPolicy RemoteSigned -Command c:\\cfn\\scripts\\Join-domain.ps1"
+								]
+							  ]
+							}
+						  }                               
+						}
+					}
+				}
+            }
+        },
+        "ServerSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupName": {
+                    "Fn::Join": [
+                        "_",
+                        [
+                            {
+                                "Ref": "AWS::StackName"
+                            },
+                            "ServerSecurityGroup"
+                        ]
+                    ]
+                },
+                "GroupDescription": "Allow access from HTTPS traffic",
+                "VpcId": {
+                    "Ref": "VPCID"
+                },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "443",
+                        "ToPort": "443",
+                        "CidrIp": {
+                            "Ref": "RemoteAccessCIDR"
+                        },
+                        "Description": "HTTPS"
+                    }
+                ]
+            }
+        },
+        "TargetSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupName": {
+                    "Fn::Join": [
+                        "_",
+                        [
+                            {
+                                "Ref": "AWS::StackName"
+                            },
+                            "TargetSecurityGroup"
+                        ]
+                    ]
+                },
+                "GroupDescription": "Allow access for SSH, HTTPS and Data transfer",
+                "VpcId": {
+                    "Ref": "VPCID"
+                },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "443",
+                        "ToPort": "443",
+                        "CidrIp": "0.0.0.0/0",
+                        "Description": "HTTPS"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "CidrIp": "0.0.0.0/0",
+                        "Description": "SSH"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "3725",
+                        "ToPort": "3725",
+                        "CidrIp": "0.0.0.0/0",
+                        "Description": "Data Transfer"
+                    }
+                ]
+            }
+        },
+		
+		"MigrateInstanceProfile" : {
+			  "Type" : "AWS::IAM::InstanceProfile",
+			  "Properties" : {
+				"Path" : "/",
+				"Roles" : [
+				  {
+					"Ref" : "MigrateRole"
+				  }
+				]
+			  }
+		},
+        "MigratePolicy": {
+            "Type": "AWS::IAM::Policy",
+            "Properties": {
+                "PolicyName": "PSMDefault",
+                "PolicyDocument": {
+					"Version": "2012-10-17",
+					"Statement": [
+						{
+							"Sid": "VisualEditor0",
+							"Effect": "Allow",
+							"Action": [
+								"ec2:TerminateInstances",
+								"ec2:DeleteTags",
+								"ec2:StartInstances",
+								"ec2:CreateTags",
+								"kms:DescribeKey",
+								"ec2:RunInstances",
+								"ec2:StopInstances"
+							],
+							"Resource": [
+								"arn:aws:kms:*:*:key/*",
+								"arn:aws:ec2:*:*:subnet/*",
+								"arn:aws:ec2:*:*:instance/*",
+								"arn:aws:ec2:*:*:volume/*",
+								"arn:aws:ec2:*:*:security-group/*",
+								"arn:aws:ec2:*:*:network-interface/*",
+								"arn:aws:ec2:*::image/*"
+							]
+						},
+						{
+							"Sid": "VisualEditor1",
+							"Effect": "Allow",
+							"Action": [
+								"gamelift:DescribeEC2InstanceLimits",
+								"ec2:DeregisterImage",
+								"ec2:DeleteSnapshot",
+								"ec2:DescribeInstances",
+								"ec2:DescribeRegions",
+								"ec2:CreateImage",
+								"ec2:DescribeSnapshots",
+								"ec2:DescribePlacementGroups",
+								"pricing:GetProducts",
+								"ec2:DescribeSecurityGroups",
+								"ec2:DescribeHosts",
+								"ec2:DescribeImages",
+								"ec2:DescribeAvailabilityZones",
+								"ec2:DescribeVpcs",
+								"kms:ListAliases",
+								"ec2:DescribeVolumes",
+								"ec2:DescribeAccountAttributes",
+								"ec2:DescribeReservedInstances",
+								"ec2:ModifyInstanceAttribute",
+								"ec2:DescribeSubnets",
+								"ec2:DescribeKeyPairs",
+								"ec2:DescribeInstanceStatus"
+							],
+							"Resource": "*"
+						},
+						{
+							"Sid": "VisualEditor2",
+							"Effect": "Allow",
+							"Action": [
+								"kms:Decrypt",
+								"kms:Encrypt",
+								"ec2:CreateVolume"
+							],
+							"Resource": [
+								"arn:aws:ec2:*:*:volume/*",
+								"arn:aws:kms:*:*:key/*"
+							]
+						},
+						{
+							"Sid": "VisualEditor3",
+							"Effect": "Allow",
+							"Action": [
+								"ec2:AttachVolume",
+								"kms:CreateGrant"
+							],
+							"Resource": [
+								"arn:aws:ec2:*:*:instance/*",
+								"arn:aws:ec2:*:*:volume/*",
+								"arn:aws:kms:*:*:key/*"
+							]
+						},
+						{
+							"Sid": "VisualEditor4",
+							"Effect": "Allow",
+							"Action": "ec2:DetachVolume",
+							"Resource": [
+								"arn:aws:ec2:*:*:instance/*",
+								"arn:aws:ec2:*:*:volume/*"
+							]
+						},
+						{
+							"Sid": "VisualEditor5",
+							"Effect": "Allow",
+							"Action": "ec2:DeleteVolume",
+							"Resource": "arn:aws:ec2:*:*:volume/*"
+						},
+						{
+							"Sid": "VisualEditor6",
+							"Effect": "Allow",
+							"Action": "ec2:RunInstances",
+							"Resource": [
+								"arn:aws:ec2:*:*:subnet/*",
+								"arn:aws:ec2:*:*:key-pair/*",
+								"arn:aws:ec2:*:*:instance/*",
+								"arn:aws:ec2:*::snapshot/*",
+								"arn:aws:ec2:*:*:launch-template/*",
+								"arn:aws:ec2:*:*:volume/*",
+								"arn:aws:ec2:*:*:security-group/*",
+								"arn:aws:ec2:*:*:placement-group/*",
+								"arn:aws:ec2:*:*:network-interface/*",
+								"arn:aws:ec2:*::image/*"
+							]
+						}
+					]
+				},
+				"Roles" : [
+					  {
+						"Ref" : "MigrateRole"
+					  }
+				]
+            }
+        },
+		"MigrateRole": {
+			 "Type": "AWS::IAM::Role",
+			 "Properties": {
+				"AssumeRolePolicyDocument": {
+				   "Version" : "2012-10-17",
+				   "Statement": [ {
+					  "Effect": "Allow",
+					  "Principal": {
+						 "Service": [ "ec2.amazonaws.com" ]
+					  },
+					  "Action": [ "sts:AssumeRole" ]
+				   } ]
+				},
+				"Path": "/"
+			 }
+		},
+        "ElasticIP": {
+            "Type": "AWS::EC2::EIP",
+            "Condition": "AutoAssignEIP",
+            "Properties": {
+                "InstanceId": {
+                    "Ref": "MigrateServerInstance"
+                },
+                "Domain": "vpc"
+            }
+        },
+        "RecoveryAlarm": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmDescription": "Trigger a recovery when PlateSpin Migrate server instance status check fails for 15 consecutive minutes.",
+                "Namespace": "AWS/EC2" ,
+                "MetricName": "StatusCheckFailed_System",
+                "Statistic": "Minimum",
+                "Period": "60",
+                "EvaluationPeriods": "15",
+                "ComparisonOperator": "GreaterThanThreshold",
+                "Threshold": "0",
+                "AlarmActions": [ {"Fn::Join" : ["", ["arn:aws:automate:", { "Ref" : "AWS::Region" }, ":ec2:recover" ]]},{ "Ref" : "AlarmNotificationTopic" } ],
+                "Dimensions": [{"Name": "InstanceId","Value": {"Ref": "MigrateServerInstance"}}]
+            }
+        },
+        "CPUAlarm" : {
+            "Type" : "AWS::CloudWatch::Alarm",
+            "Properties" : {
+                "AlarmDescription" : "CPU alarm when PlateSpin Migrate server instance CPU usage average percentage exceeds 90%",
+                "AlarmActions" : [{ "Ref" : "AlarmNotificationTopic" }],
+                "MetricName" : "CPUUtilization",
+                "Namespace" : "AWS/EC2",
+                "Statistic" : "Average",
+                "Period" : "60",
+                "EvaluationPeriods" : "3",
+                "Threshold" : "90",
+                "ComparisonOperator" : "GreaterThanThreshold",
+                "Dimensions": [{"Name": "InstanceId","Value": {"Ref": "MigrateServerInstance"}}]
+            }
+        },
+        "AlarmNotificationTopic": {
+            "Type": "AWS::SNS::Topic",
+            "Properties": {
+                "Subscription": [
+                    {
+                        "Endpoint": { "Ref" : "SNSTopicMailID" },
+                        "Protocol": "email"
+                    }
+                ]
+            }
+      }
+    },
+    "Parameters": {
+        "HostName": {
+            "Description": "Instance Name to be set. Length upto 15 characters. Leave blank to auto-generate based on stack name.",
+            "Type": "String",
+            "Default": "",
+            "AllowedPattern": "(?=.{0,15}$)[0-9A-Za-z](?:(?:[0-9A-Za-z]|\\b-){0,13}[0-9A-Za-z])?(?:[0-9A-Za-z](?:(?:[0-9A-Za-z]|\\b-){0,61}[0-9A-Za-z])?)*|",
+            "ConstraintDescription": "Must begin with a letter and contain only alphanumeric characters. Maximum length upto 15 characters."
+        },
+        "WorkloadInstanceType": {
+            "Description": "Migrate Server EC2 instance type",
+            "Type": "String",
+            "Default": "t2.large",
+            "AllowedValues": [
+                "t2.large",
+                "t2.xlarge",
+                "t2.2xlarge"
+            ],
+            "ConstraintDescription": "must be a valid EC2 instance type."
+        },
+        "KeyPairName": {
+            "Description": "Name of an EC2 KeyPair to enable access to the instance.",
+            "Type": "AWS::EC2::KeyPair::KeyName",
+            "AllowedPattern": ".+",
+            "ConstraintDescription": "Must be the name of an existing EC2 KeyPair."
+        },
+        "VPCID": {
+            "Description": "Target VPC ID for PlateSpin Migrate instance",
+            "Type": "AWS::EC2::VPC::Id",
+            "AllowedPattern": ".+",
+            "ConstraintDescription": "Must be a valid VPC Id."
+        },
+        "PublicSubnetID": {
+            "Description": "Public SubnetID for PlateSpin Migrate instance",
+            "Type": "AWS::EC2::Subnet::Id",
+            "AllowedPattern": ".+",
+            "ConstraintDescription": "Must be a valid Subnet Id."
+        },
+        "AutoEIP": {
+            "Description": "Automatically assign an Elastic IP address to the PlateSpin Migrate instance",
+            "Type": "String",
+            "AllowedValues": [
+                "Yes",
+                "No"
+            ],
+            "Default": "Yes"
+        },
+        "RemoteAccessCIDR": {
+            "AllowedPattern": "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/([0-9]|[1-2][0-9]|3[0-2]))$",
+            "ConstraintDescription": "CIDR block parameter must be in the form x.x.x.x/x",
+            "Description": "PlateSpin Migrate access will be allowed from this CIDR range (example for full access: 0.0.0.0/0)",
+            "Type": "String"
+        },
+        "SNSTopicMailID": {
+            "Description": "Email ID to register SNS topic for sending CloudWatch alarm notifications",
+            "Type": "String",
+            "AllowedPattern": "^[\\x20-\\x45]?[\\w-\\+]+(\\.[\\w]+)*@[\\w-]+(\\.[\\w]+)*(\\.[a-z]{2,})$",
+            "ConstraintDescription": "Enter the email id for the SNS topic"
+        }
+    },
+    "Conditions": {
+        "AutoAssignEIP": {
+            "Fn::Equals": [
+                {
+                    "Ref": "AutoEIP"
+                },
+                "Yes"
+            ]
+        },
+        "GenerateHostName": {
+            "Fn::Equals": [
+                {
+                    "Ref": "HostName"
+                },
+                ""
+            ]
+        }
+    },
+    "Mappings": {
+        "AWSRegionArch2AMI": {
+            "us-west-2": {
+                "64": "ami-018d63007bbf67ac6"
+            },
+            "eu-west-3": {
+                "64": "ami-08704b129c719d786"
+            },
+            "eu-west-1": {
+                "64": "ami-0f47b7082ee10218a"
+            }
+        }
+    },
+    "Outputs": {
+        "MigrateServerURL": {
+            "Value": {
+                "Fn::Join": [
+                    "",
+                    [
+                        "https://",
+                        {
+                            "Fn::GetAtt": [
+                                "MigrateServerInstance",
+                                "PublicDnsName"
+                            ]
+                        },
+                        "/migrate"
+                    ]
+                ]
+            },
+            "Description": "Newly created PlateSpin Migrate server Public URL"
+        },
+        "MigrateServerIP": {
+            "Value": {
+                "Fn::GetAtt": [
+                    "MigrateServerInstance",
+                    "PublicIp"
+                ]
+            },
+            "Description": "Newly created PlateSpin Migrate server Public IP"
+        }
+    }
+}
