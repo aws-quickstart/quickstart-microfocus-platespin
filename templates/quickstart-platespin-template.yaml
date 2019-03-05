@@ -117,7 +117,7 @@ Parameters:
       ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
     Description: >-
-      The CIDR range from which the PlateSpin Migrate server and target instances can be accessed through RDP and SSH.
+      The CIDR IP range that is permitted RDP (3389/TCP) and HTTPS (443/TCP) access to the Migrate server, and RDP (3389/TCP) or SSH (22/TCP) access to the migrated workloads in production or test environment, for administrative purposes.
     Type: String
   MigrateAdminConfirmPassword:
     Description: >-
@@ -168,7 +168,7 @@ Parameters:
       ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
     Description: >-
-      The CIDR range from which the PlateSpin Migrate server Web UI and services can be accessed through HTTPS and data transfer ports. 
+      The CIDR IP range that is permitted HTTPS (443/TCP) access to the Migrate server for agent registration, and source replication data traffic (3275/TCP) access to the replicating workloads in Cloud. This CIDR IP range must contain all source workloads to be migrated.
     Type: String
   QSS3BucketName:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
@@ -207,7 +207,7 @@ Parameters:
       ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
     Description: >-
-      The CIDR range from which the PlateSpin Migrate target workloads can be accessed through all TCP ports.
+      The CIDR IP range that is permitted ‘all traffic’ (0-65535/UDP,TCP) access to migrated workloads in production and test environment.
     Type: String
   VPCID:
     Description: The VPC ID for launching PlateSpin Migrate server instance.
@@ -276,10 +276,10 @@ Mappings:
     us-west-2:
       PSM201811AMI: ami-04a42125a3d85b0d9
 Resources:
-  ServerSecurityGroup:
+  ManagementSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
-      GroupName: !Sub ${AWS::StackName}-PSMServer-SG
+      GroupName: !Sub ${AWS::StackName}-PSMManagement-SG
       GroupDescription: 'Allow access from HTTPS and RDP traffic'
       VpcId: !Ref VPCID
       SecurityGroupIngress:
@@ -287,7 +287,7 @@ Resources:
           FromPort: 443
           ToPort: 443
           CidrIp: !Ref ReplicationAccessCIDR
-          Description: HTTPS for migrate services
+          Description: HTTPS for agent registration
         - IpProtocol: tcp
           FromPort: 443
           ToPort: 443
@@ -303,6 +303,11 @@ Resources:
           ToPort: 3389
           CidrIp: !Ref ManagementAccessCIDR
           Description: RDP from management network
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref ManagementAccessCIDR
+          Description: HTTPS from management network for Web UI
   ReplicationSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -335,7 +340,12 @@ Resources:
           FromPort: 0
           ToPort: 65535
           CidrIp: !Ref TargetWorkloadsInterconnectCIDR
-          Description: All incoming TCP from within the VPC
+          Description: All incoming TCP traffic
+        - IpProtocol: udp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: !Ref TargetWorkloadsInterconnectCIDR
+          Description: All incoming UDP traffic
         - IpProtocol: tcp
           FromPort: 3389
           ToPort: 3389
@@ -351,7 +361,12 @@ Resources:
           FromPort: 0
           ToPort: 65535
           CidrIp: !Ref TargetWorkloadsInterconnectCIDR
-          Description: All outgoing TCP from within the VPC
+          Description: All outgoing TCP traffic
+        - IpProtocol: udp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: !Ref TargetWorkloadsInterconnectCIDR
+          Description: All outgoing UDP traffic
   MigratePolicy:
     Type: 'AWS::IAM::Policy'
     Properties:
@@ -479,7 +494,7 @@ Resources:
       SubnetId: !Ref SubnetID
       Description: Network Interface for Migrate Server
       GroupSet: 
-        - !Ref ServerSecurityGroup
+        - !Ref ManagementSecurityGroup
       SourceDestCheck: true
   AssociateMigrateServerNetworkInterface:
     Type: AWS::EC2::EIPAssociation
@@ -814,7 +829,7 @@ Resources:
             DeviceIndex: 0
             SubnetId: !Ref SubnetID
             GroupSet:
-              - !Ref ServerSecurityGroup
+              - !Ref ManagementSecurityGroup
             DeleteOnTermination: true
       Tags:
         - Key: Name
