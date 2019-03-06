@@ -39,7 +39,7 @@ Metadata:
           - PrivateSubnet2CIDR
           - AvailabilityZones
       - Label:
-          default: PlateSpin Migrate Server configuration
+          default: PlateSpin Migrate server configuration
         Parameters:
           - MigrateServerInstanceType
           - AssignElasticIP
@@ -69,15 +69,15 @@ Metadata:
       ManagementAccessCIDR:
         default: Management access CIDR
       MigrateAdminConfirmPassword:
-        default: Re-enter the Migrate Server Admin password
+        default: Re-enter the admin password
       MigrateAdminPassword:
-        default: Migrate Server Admin password
+        default: Admin password
       MigrateAdminUsername:
-        default: Migrate Server Admin username
+        default: Admin username
       MigrateServerHostname:
-        default: Migrate Server Hostname
+        default: Hostname
       MigrateServerInstanceType:
-        default: Migrate Server instance type
+        default: Instance type
       PrivateSubnet1CIDR:
         default: Private subnet 1 CIDR
       PrivateSubnet2CIDR:
@@ -131,11 +131,11 @@ Parameters:
       ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
     Description: >-
-      The CIDR IP range that is permitted RDP (3389/TCP) and HTTPS (443/TCP) access to the Migrate server, and RDP (3389/TCP) or SSH (22/TCP) access to the migrated workloads in production or test environment, for administrative purposes.
+      The CIDR IP range that is permitted RDP (3389/TCP) and HTTPS (443/TCP) access to the PlateSpin Migrate server, and RDP (3389/TCP) or SSH (22/TCP) access to the migrated workloads in the production or test environment, for administrative purposes.
     Type: String
   MigrateAdminConfirmPassword:
     Description: >-
-      The password confirmation for the Migrate server admin account.
+      The password confirmation for the PlateSpin Migrate server admin account.
     Type: String
     MinLength: '8'
     MaxLength: '32'
@@ -144,7 +144,7 @@ Parameters:
     NoEcho: 'true'
   MigrateAdminPassword:
     Description: >-
-      The password for the Migrate server admin account. It can contain 8 to 32 alphanumeric characters and symbols.
+      The password for the PlateSpin Migrate server admin account. It can contain 8 to 32 alphanumeric characters and symbols.
     Type: String
     MinLength: '8'
     MaxLength: '32'
@@ -230,7 +230,7 @@ Parameters:
       ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
     Description: >-
-      The CIDR IP range that is permitted HTTPS (443/TCP) access to the Migrate server for agent registration, and source replication data traffic (3275/TCP) access to the replicating workloads in Cloud. This CIDR IP range must contain all source workloads to be migrated.
+      The CIDR IP range that is permitted HTTPS (443/TCP) access to the PlateSpin Migrate server for agent registration, and source replication data traffic (3275/TCP) access to the replicating workloads in the cloud. This CIDR IP range must contain all source workloads to be migrated.
     Type: String
   SNSTopicMailID:
     Description: >-
@@ -244,7 +244,7 @@ Parameters:
       ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
     Description: >-
-      The CIDR IP range that is permitted ‘all traffic’ (0-65535/UDP,TCP) access to migrated workloads in production and test environment.
+      The CIDR IP range that is permitted all-traffic (0-65535/UDP,TCP) access to migrated workloads in the production and test environment.
     Type: String
   VPCCIDR:
     AllowedPattern: >-
