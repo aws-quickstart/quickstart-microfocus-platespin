@@ -4,10 +4,6 @@
         "ParameterValue": "Yes"
     },
     {
-        "ParameterKey": "AssignElasticIP",
-        "ParameterValue": "Yes"
-    },
-    {
         "ParameterKey": "AvailabilityZones",
         "ParameterValue": "$[taskcat_genaz_2]"
     },
@@ -21,7 +17,7 @@
     },
     {
         "ParameterKey": "ManagementAccessCIDR",
-        "ParameterValue": "0.0.0.0/0"
+        "ParameterValue": "10.0.0.0/16"
     },
     {
         "ParameterKey": "MigrateAdminConfirmPassword",
@@ -41,7 +37,7 @@
     },
     {
         "ParameterKey": "MigrateServerInstanceType",
-        "ParameterValue": "m5.large"
+        "ParameterValue": "t3.large"
     },
     {
         "ParameterKey": "PrivateSubnet1CIDR",
@@ -69,7 +65,7 @@
     },
     {
         "ParameterKey": "ReplicationAccessCIDR",
-        "ParameterValue": "0.0.0.0/0"
+        "ParameterValue": "10.0.0.0/16"
     },
     {
         "ParameterKey": "SNSTopicMailID",
@@ -77,7 +73,7 @@
     },
     {
         "ParameterKey": "TargetWorkloadsInterconnectCIDR",
-        "ParameterValue": "0.0.0.0/0"
+        "ParameterValue": "10.0.0.0/16"
     },
     {
         "ParameterKey": "VPCCIDR",
