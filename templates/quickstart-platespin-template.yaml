@@ -258,7 +258,7 @@ Mappings:
     eu-central-1:
       PSM201811AMI: ami-02f448a62a019ad25
     eu-north-1:
-      PSM201811AMI: ami-024746edb8b944161
+      PSM201811AMI: ami-07e6666de23012071
     eu-west-1:
       PSM201811AMI: ami-03e62918d0428ce6e
     eu-west-2:
