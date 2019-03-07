@@ -4,6 +4,10 @@
         "ParameterValue": "Yes"
     },
     {
+        "ParameterKey": "AssignElasticIP",
+        "ParameterValue": "Yes"
+    },
+    {
         "ParameterKey": "AvailabilityZones",
         "ParameterValue": "$[taskcat_genaz_2]"
     },
